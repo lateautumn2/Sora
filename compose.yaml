@@ -1,0 +1,97 @@
+name: sora-blog
+
+x-app-environment: &app-environment
+  NODE_ENV: production
+  APP_URL: ${APP_URL:?APP_URL is required}
+  AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET is required}
+  VISITOR_HASH_SECRET: ${VISITOR_HASH_SECRET:?VISITOR_HASH_SECRET is required}
+  SETUP_TOKEN: ${SETUP_TOKEN:?SETUP_TOKEN is required}
+  TRUSTED_ORIGINS: ${TRUSTED_ORIGINS:?TRUSTED_ORIGINS is required}
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  DATABASE_PATH: /app/data/blog.db
+  UPLOAD_DIR: /app/data/uploads
+  DATA_ARCHIVE_MAX_BYTES: ${DATA_ARCHIVE_MAX_BYTES:-1073741824}
+  DATA_ARCHIVE_MAX_ENTRIES: ${DATA_ARCHIVE_MAX_ENTRIES:-20000}
+  DATA_ARCHIVE_MAX_ENTRY_BYTES: ${DATA_ARCHIVE_MAX_ENTRY_BYTES:-1073741824}
+  DATA_ARCHIVE_MAX_EXPANDED_BYTES: ${DATA_ARCHIVE_MAX_EXPANDED_BYTES:-4294967296}
+
+services:
+  app:
+    image: ${SORA_IMAGE:-sora-blog:local}
+    build:
+      context: .
+    restart: unless-stopped
+    init: true
+    environment: *app-environment
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${PORT:-3000}:3000"
+    volumes:
+      - ./data:/app/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+  migrate:
+    image: ${SORA_IMAGE:-sora-blog:local}
+    build:
+      context: .
+    profiles: ["tools"]
+    environment: *app-environment
+    volumes:
+      - ./data:/app/data
+    command: ["node", "scripts/migrate.mjs"]
+
+  backup:
+    image: ${SORA_IMAGE:-sora-blog:local}
+    build:
+      context: .
+    profiles: ["tools"]
+    environment: *app-environment
+    volumes:
+      - ./data:/app/data
+      - ./backups:/app/backups
+    command: ["node", "scripts/backup.mjs", "--output", "/app/backups"]
+
+  restore:
+    image: ${SORA_IMAGE:-sora-blog:local}
+    build:
+      context: .
+    profiles: ["tools"]
+    environment: *app-environment
+    volumes:
+      - ./data:/app/data
+      - ./backups:/app/backups:ro
+    command:
+      [
+        "node",
+        "scripts/restore.mjs",
+        "/app/backups/${RESTORE_BACKUP:-set-RESTORE_BACKUP}",
+        "--confirm",
+      ]
+
+  content-package:
+    image: ${SORA_IMAGE:-sora-blog:local}
+    build:
+      context: .
+    profiles: ["tools"]
+    environment: *app-environment
+    volumes:
+      - ./data:/app/data
+      - ${CONTENT_PACKAGE:-./converted/halo}:/app/import:ro
+    command:
+      [
+        "node",
+        "scripts/content-import.mjs",
+        "${CONTENT_COMMAND:-analyze}",
+        "--source",
+        "/app/import",
+      ]

@@ -1,0 +1,60 @@
+name: Publish image
+
+on:
+  push:
+    tags: ["*"]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Image tag used for a manual build
+        required: false
+        default: manual
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+concurrency:
+  group: image-${{ github.ref }}-${{ inputs.image_tag || 'tag' }}
+  cancel-in-progress: false
+
+env:
+  IMAGE_NAME: ghcr.io/lateautumn2/sora
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=${{ inputs.image_tag || 'manual' }},enable=${{ github.event_name == 'workflow_dispatch' }}
+            type=raw,value=latest,enable=${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
+            type=sha
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: mode=max
+          sbom: true

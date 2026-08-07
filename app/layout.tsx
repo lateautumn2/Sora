@@ -1,0 +1,28 @@
+import type { Metadata } from "next";
+
+import { getSiteSettings } from "@/lib/content/service";
+import { getEnvironment } from "@/lib/env";
+
+import "./globals.css";
+
+export function generateMetadata(): Metadata {
+  const settings = getSiteSettings();
+  return {
+    metadataBase: getEnvironment().appUrl,
+    title: { default: settings.title, template: `%s | ${settings.title}` },
+    description: settings.description,
+  };
+}
+
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  return (
+    <html lang="zh-CN">
+      <body>
+        <a className="skip-link" href="#main-content">
+          跳到正文
+        </a>
+        {children}
+      </body>
+    </html>
+  );
+}

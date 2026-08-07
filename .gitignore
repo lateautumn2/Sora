@@ -1,0 +1,43 @@
+# dependencies
+/node_modules/
+/.pnpm-store/
+
+# Next.js
+/.next/
+/out/
+
+# test artifacts
+/coverage/
+/playwright-report/
+/test-results/
+
+# runtime data
+/data/*
+!/data/.gitkeep
+/backups/
+/backup/
+/converted/
+
+# project-external tools and internal documentation
+/tools/
+/docs/
+/daily.md
+/AGENTS.md
+/.agents/
+/.codex/
+
+# local configuration
+.env
+.env.local
+.env.*.local
+
+# tooling
+*.tsbuildinfo
+.eslintcache
+.pnpm-debug.log*
+
+# editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

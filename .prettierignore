@@ -1,0 +1,11 @@
+/.next
+/.pnpm-store
+/backup
+/backups
+/converted
+/coverage
+/data
+/node_modules
+/playwright-report
+/pnpm-lock.yaml
+/test-results
