@@ -15,31 +15,15 @@ Sora 是一个可自行部署的全栈博客系统，视觉与信息结构参考
 
 ## Docker Compose 部署
 
-服务器需要安装 Docker Engine 与 Docker Compose 插件。下载仓库中的 `compose.yaml`，在同一目录创建 `.env`：
-
-```dotenv
-APP_URL=https://blog.example.com
-AUTH_SECRET=请替换为至少32字符的独立随机值
-VISITOR_HASH_SECRET=请替换为另一个至少32字符的独立随机值
-SETUP_TOKEN=请替换为至少32字符的一次性初始化令牌
-TRUSTED_ORIGINS=https://blog.example.com
-
-# 可选配置
-SORA_VERSION=latest
-BIND_ADDRESS=127.0.0.1
-PORT=3000
-LOG_LEVEL=info
-```
-
-为 `./data` 创建持久化目录。Linux bind mount 需要允许容器用户 `1001:1001` 写入该目录。数据库迁移会在容器启动时自动执行，首次部署直接启动应用：
+服务器需要安装 Docker Engine 与 Docker Compose 插件。下载仓库中的 `compose.yaml`，按需修改其中的 `APP_URL`、`TRUSTED_ORIGINS` 与三个密钥，然后启动：
 
 ```shell
 docker compose up -d app
 ```
 
-默认只监听 `127.0.0.1:3000`，建议使用 Caddy、Nginx 等反向代理提供 HTTPS。启动后访问 `/admin/setup`，输入 `.env` 中的 `SETUP_TOKEN` 创建管理员；令牌仅用于首次初始化，不是管理员登录密码。
+为 `./data` 创建持久化目录。Linux bind mount 需要允许容器用户 `1001:1001` 写入该目录。数据库迁移会在容器启动时自动执行。`compose.yaml` 默认监听 `3000:3000`，建议使用 Caddy、Nginx 等反向代理提供 HTTPS。启动后访问 `/admin/setup`，输入 `compose.yaml` 中的 `SETUP_TOKEN` 创建管理员；令牌仅用于首次初始化，不是管理员登录密码。
 
-升级时修改 `SORA_VERSION`，或保持 `latest`，然后拉取镜像并重建容器：
+升级时直接拉取镜像并重建容器：
 
 ```shell
 docker compose pull
@@ -48,7 +32,7 @@ docker compose up -d app
 
 若 GHCR 镜像尚未设为公开，需要先使用具有 `read:packages` 权限的 GitHub Token 执行 `docker login ghcr.io`。
 
-本地构建镜像：先执行 `docker build -t sora-blog:local .`，再在 `.env` 中设置 `SORA_IMAGE=sora-blog:local`，即可让 Compose 使用本地镜像。
+本地构建镜像：先执行 `docker build -t sora-blog:local .`，再将 `compose.yaml` 中 `image` 改为 `sora-blog:local` 后启动。
 
 ## 备份与恢复
 

@@ -1,35 +1,33 @@
 # Sora 博客 — Docker Compose 部署配置
 #
-# 用法：
-#   1. 复制 .env.example 为 .env，并填写 APP_URL、AUTH_SECRET、
-#      VISITOR_HASH_SECRET、SETUP_TOKEN、TRUSTED_ORIGINS（必填项缺失时本文件会直接报错）
-#   2. 启动应用：docker compose up -d
+# 配置直接写在本文件中，不依赖 .env，部署只需：
+#   docker compose up -d
 #
 # 说明：
 #   - 数据库迁移在容器启动时自动执行，无需手动运行迁移命令
 #   - 完整备份与恢复请在网页端 /admin/data 完成
-#   - 镜像：默认拉取 ghcr.io/lateautumn2/sora（latest 或 SORA_VERSION 指定版本）；
-#     本地构建：docker build -t sora-blog:local .，再设置 SORA_IMAGE=sora-blog:local 后启动
+#   - 三个密钥已生成随机值；若仓库公开或需要更换，修改后再启动，
+#     并保证每个值至少 32 字符
 
 name: sora-blog
 
 services:
   app:
-    image: ${SORA_IMAGE:-ghcr.io/lateautumn2/sora:${SORA_VERSION:-latest}}
+    image: ghcr.io/lateautumn2/sora:latest
     restart: unless-stopped
     init: true
     environment:
       NODE_ENV: production
-      APP_URL: ${APP_URL:?请在 .env 中设置 APP_URL}
-      AUTH_SECRET: ${AUTH_SECRET:?请在 .env 中设置 AUTH_SECRET}
-      VISITOR_HASH_SECRET: ${VISITOR_HASH_SECRET:?请在 .env 中设置 VISITOR_HASH_SECRET}
-      SETUP_TOKEN: ${SETUP_TOKEN:?请在 .env 中设置 SETUP_TOKEN}
-      TRUSTED_ORIGINS: ${TRUSTED_ORIGINS:?请在 .env 中设置 TRUSTED_ORIGINS}
-      LOG_LEVEL: ${LOG_LEVEL:-info}
+      APP_URL: http://localhost:3000
+      AUTH_SECRET: 086d5d63c6cd4e059522347ff051083fc40ab18d63d149c89cddec7fbc7c032f
+      VISITOR_HASH_SECRET: 4045fb68f9bb461cacf2ba7f06cae7a8d43fbc7f7a6144f6979c30638d62788d
+      SETUP_TOKEN: 8266504b8fb447f8827a4ca723bbef43e6b2995669804231a1eb8169988dc6eb
+      TRUSTED_ORIGINS: http://localhost:3000
+      LOG_LEVEL: info
       DATABASE_PATH: /app/data/blog.db
       UPLOAD_DIR: /app/data/uploads
     ports:
-      - "${BIND_ADDRESS:-127.0.0.1}:${PORT:-3000}:3000"
+      - "3000:3000"
     volumes:
       - ./data:/app/data
     healthcheck:
