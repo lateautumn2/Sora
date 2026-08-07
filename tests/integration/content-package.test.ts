@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -12,6 +12,7 @@ import { extractArchive } from "@/lib/data/archive";
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const converterPath = join(projectRoot, "tools", "halo-convert", "index.mjs");
+const converterAvailable = existsSync(converterPath);
 const importerPath = join(projectRoot, "scripts", "content-import.mjs");
 const migrationPath = join(projectRoot, "scripts", "migrate.mjs");
 const temporaryDirectories: string[] = [];
@@ -42,7 +43,7 @@ afterEach(() => {
 });
 
 describe("通用内容包", () => {
-  it("重建 Halo 增量快照并完整导入 Markdown、评论和图片", async () => {
+  it.skipIf(!converterAvailable)("重建 Halo 增量快照并完整导入 Markdown、评论和图片", async () => {
     const root = mkdtempSync(join(tmpdir(), "sora-content-package-"));
     temporaryDirectories.push(root);
     const backup = join(root, "backup");
