@@ -31,10 +31,9 @@ PORT=3000
 LOG_LEVEL=info
 ```
 
-为 `./data` 和 `./backups` 创建持久化目录。Linux bind mount 需要允许容器用户 `1001:1001` 写入这些目录。首次部署先迁移数据库，再启动应用：
+为 `./data` 创建持久化目录。Linux bind mount 需要允许容器用户 `1001:1001` 写入该目录。数据库迁移会在容器启动时自动执行，首次部署直接启动应用：
 
 ```shell
-docker compose --profile tools run --rm migrate
 docker compose up -d app
 ```
 
@@ -44,7 +43,6 @@ docker compose up -d app
 
 ```shell
 docker compose pull
-docker compose --profile tools run --rm migrate
 docker compose up -d app
 ```
 
@@ -54,23 +52,7 @@ docker compose up -d app
 
 ## 备份与恢复
 
-管理员可在 `/admin/data` 下载完整备份 ZIP、导入内容包或提交完整备份恢复。恢复会在应用重启时执行，并保留恢复前的数据副本。
-
-也可以从服务器执行离线备份：
-
-```shell
-docker compose --profile tools run --rm backup
-```
-
-离线恢复前先停止应用。`RESTORE_BACKUP` 是 `./backups` 下由备份命令生成的目录名：
-
-```shell
-docker compose stop app
-RESTORE_BACKUP=2026-08-07T00-00-00-000Z docker compose --profile tools run --rm restore
-docker compose up -d app
-```
-
-PowerShell 请先设置 `$env:RESTORE_BACKUP`，再执行相同的 Compose 恢复命令。
+管理员可在 `/admin/data` 下载完整备份 ZIP、导入内容包或提交完整备份恢复，无需进入服务器执行命令。恢复会在应用重启时执行，并保留恢复前的数据副本；提交恢复请求后重启容器即可完成。
 
 ## 本地开发
 
@@ -104,6 +86,6 @@ app/          公开站点、管理后台和 API
 components/   页面与交互组件
 lib/          认证、内容、评论、媒体和数据服务
 db/           SQLite Schema 与迁移
-scripts/      迁移、备份、恢复和内容导入脚本
+scripts/      启动迁移，以及备份、恢复和内容导入脚本
 tests/        单元、集成与端到端测试
 ```

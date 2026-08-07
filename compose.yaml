@@ -1,13 +1,15 @@
 # Sora 博客 — Docker Compose 部署配置
 #
 # 用法：
-#   1. 复制 .env.example 为 .env，并填写 APP_URL、AUTH_SECRET、VISITOR_HASH_SECRET、
-#      SETUP_TOKEN、TRUSTED_ORIGINS（必填项缺失时本文件会直接报错）
-#   2. 首次部署先执行迁移：docker compose --profile tools run --rm migrate
-#   3. 启动应用：docker compose up -d
+#   1. 复制 .env.example 为 .env，并填写 APP_URL、AUTH_SECRET、
+#      VISITOR_HASH_SECRET、SETUP_TOKEN、TRUSTED_ORIGINS（必填项缺失时本文件会直接报错）
+#   2. 启动应用：docker compose up -d
 #
-# 镜像：默认拉取 ghcr.io/lateautumn2/sora（latest 或 SORA_VERSION 指定版本）。
-# 本地构建：docker build -t sora-blog:local .，再设置 SORA_IMAGE=sora-blog:local 后启动。
+# 说明：
+#   - 数据库迁移在容器启动时自动执行，无需手动运行迁移命令
+#   - 完整备份与恢复请在网页端 /admin/data 完成
+#   - 镜像：默认拉取 ghcr.io/lateautumn2/sora（latest 或 SORA_VERSION 指定版本）；
+#     本地构建：docker build -t sora-blog:local .，再设置 SORA_IMAGE=sora-blog:local 后启动
 
 name: sora-blog
 
@@ -40,42 +42,3 @@ services:
       timeout: 5s
       start_period: 10s
       retries: 3
-
-  # 数据库迁移：docker compose --profile tools run --rm migrate
-  migrate:
-    image: ${SORA_IMAGE:-ghcr.io/lateautumn2/sora:${SORA_VERSION:-latest}}
-    profiles: ["tools"]
-    environment:
-      DATABASE_PATH: /app/data/blog.db
-      UPLOAD_DIR: /app/data/uploads
-    volumes:
-      - ./data:/app/data
-    command: ["node", "scripts/migrate.mjs"]
-
-  # 离线备份：docker compose --profile tools run --rm backup
-  backup:
-    image: ${SORA_IMAGE:-ghcr.io/lateautumn2/sora:${SORA_VERSION:-latest}}
-    profiles: ["tools"]
-    environment:
-      DATABASE_PATH: /app/data/blog.db
-      UPLOAD_DIR: /app/data/uploads
-    volumes:
-      - ./data:/app/data
-      - ./backups:/app/backups
-    command: ["node", "scripts/backup.mjs", "--output", "/app/backups"]
-
-  # 离线恢复：RESTORE_BACKUP=备份目录名 docker compose --profile tools run --rm restore
-  restore:
-    image: ${SORA_IMAGE:-ghcr.io/lateautumn2/sora:${SORA_VERSION:-latest}}
-    profiles: ["tools"]
-    environment:
-      DATABASE_PATH: /app/data/blog.db
-      UPLOAD_DIR: /app/data/uploads
-    volumes:
-      - ./data:/app/data
-      - ./backups:/app/backups:ro
-    command:
-      - node
-      - scripts/restore.mjs
-      - "/app/backups/${RESTORE_BACKUP:?请设置 RESTORE_BACKUP}"
-      - --confirm

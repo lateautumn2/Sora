@@ -43,7 +43,19 @@ async function applyPendingRestore() {
   console.log(`Pending Sora restore job ${request.jobId} completed.`);
 }
 
+async function applyDatabaseMigrations() {
+  // 首次部署与升级时 schema 可能滞后，启动服务前先应用迁移。
+  // migrate.mjs 幂等执行，容器重复启动不会重复应用已执行的迁移。
+  execFileSync(process.execPath, [resolve("scripts/migrate.mjs")], {
+    cwd: process.cwd(),
+    env: process.env,
+    stdio: "inherit",
+    windowsHide: true,
+  });
+}
+
 await applyPendingRestore();
+await applyDatabaseMigrations();
 
 if (process.env.SORA_APPLY_RESTORE_ONLY === "1" || process.argv.includes("--restore-only")) {
   process.exit(0);
