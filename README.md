@@ -15,7 +15,7 @@ Sora 是一个可自行部署的全栈博客系统，视觉与信息结构参考
 
 ## Docker Compose 部署
 
-服务器需要安装 Docker Engine 与 Docker Compose 插件。下载仓库中的 `docker-compose.yaml`，在同一目录创建 `.env`：
+服务器需要安装 Docker Engine 与 Docker Compose 插件。下载仓库中的 `compose.yaml`，在同一目录创建 `.env`：
 
 ```dotenv
 APP_URL=https://blog.example.com
@@ -34,8 +34,8 @@ LOG_LEVEL=info
 为 `./data` 和 `./backups` 创建持久化目录。Linux bind mount 需要允许容器用户 `1001:1001` 写入这些目录。首次部署先迁移数据库，再启动应用：
 
 ```shell
-docker compose -f docker-compose.yaml --profile tools run --rm migrate
-docker compose -f docker-compose.yaml up -d app
+docker compose --profile tools run --rm migrate
+docker compose up -d app
 ```
 
 默认只监听 `127.0.0.1:3000`，建议使用 Caddy、Nginx 等反向代理提供 HTTPS。启动后访问 `/admin/setup`，输入 `.env` 中的 `SETUP_TOKEN` 创建管理员；令牌仅用于首次初始化，不是管理员登录密码。
@@ -43,12 +43,14 @@ docker compose -f docker-compose.yaml up -d app
 升级时修改 `SORA_VERSION`，或保持 `latest`，然后拉取镜像并重建容器：
 
 ```shell
-docker compose -f docker-compose.yaml pull
-docker compose -f docker-compose.yaml --profile tools run --rm migrate
-docker compose -f docker-compose.yaml up -d app
+docker compose pull
+docker compose --profile tools run --rm migrate
+docker compose up -d app
 ```
 
 若 GHCR 镜像尚未设为公开，需要先使用具有 `read:packages` 权限的 GitHub Token 执行 `docker login ghcr.io`。
+
+本地构建镜像：先执行 `docker build -t sora-blog:local .`，再在 `.env` 中设置 `SORA_IMAGE=sora-blog:local`，即可让 Compose 使用本地镜像。
 
 ## 备份与恢复
 
@@ -57,15 +59,15 @@ docker compose -f docker-compose.yaml up -d app
 也可以从服务器执行离线备份：
 
 ```shell
-docker compose -f docker-compose.yaml --profile tools run --rm backup
+docker compose --profile tools run --rm backup
 ```
 
 离线恢复前先停止应用。`RESTORE_BACKUP` 是 `./backups` 下由备份命令生成的目录名：
 
 ```shell
-docker compose -f docker-compose.yaml stop app
-RESTORE_BACKUP=2026-08-07T00-00-00-000Z docker compose -f docker-compose.yaml --profile tools run --rm restore
-docker compose -f docker-compose.yaml up -d app
+docker compose stop app
+RESTORE_BACKUP=2026-08-07T00-00-00-000Z docker compose --profile tools run --rm restore
+docker compose up -d app
 ```
 
 PowerShell 请先设置 `$env:RESTORE_BACKUP`，再执行相同的 Compose 恢复命令。

@@ -1,97 +1,81 @@
-name: sora-blog
+# Sora 博客 — Docker Compose 部署配置
+#
+# 用法：
+#   1. 复制 .env.example 为 .env，并填写 APP_URL、AUTH_SECRET、VISITOR_HASH_SECRET、
+#      SETUP_TOKEN、TRUSTED_ORIGINS（必填项缺失时本文件会直接报错）
+#   2. 首次部署先执行迁移：docker compose --profile tools run --rm migrate
+#   3. 启动应用：docker compose up -d
+#
+# 镜像：默认拉取 ghcr.io/lateautumn2/sora（latest 或 SORA_VERSION 指定版本）。
+# 本地构建：docker build -t sora-blog:local .，再设置 SORA_IMAGE=sora-blog:local 后启动。
 
-x-app-environment: &app-environment
-  NODE_ENV: production
-  APP_URL: ${APP_URL:?APP_URL is required}
-  AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET is required}
-  VISITOR_HASH_SECRET: ${VISITOR_HASH_SECRET:?VISITOR_HASH_SECRET is required}
-  SETUP_TOKEN: ${SETUP_TOKEN:?SETUP_TOKEN is required}
-  TRUSTED_ORIGINS: ${TRUSTED_ORIGINS:?TRUSTED_ORIGINS is required}
-  LOG_LEVEL: ${LOG_LEVEL:-info}
-  DATABASE_PATH: /app/data/blog.db
-  UPLOAD_DIR: /app/data/uploads
-  DATA_ARCHIVE_MAX_BYTES: ${DATA_ARCHIVE_MAX_BYTES:-1073741824}
-  DATA_ARCHIVE_MAX_ENTRIES: ${DATA_ARCHIVE_MAX_ENTRIES:-20000}
-  DATA_ARCHIVE_MAX_ENTRY_BYTES: ${DATA_ARCHIVE_MAX_ENTRY_BYTES:-1073741824}
-  DATA_ARCHIVE_MAX_EXPANDED_BYTES: ${DATA_ARCHIVE_MAX_EXPANDED_BYTES:-4294967296}
+name: sora-blog
 
 services:
   app:
-    image: ${SORA_IMAGE:-sora-blog:local}
-    build:
-      context: .
+    image: ${SORA_IMAGE:-ghcr.io/lateautumn2/sora:${SORA_VERSION:-latest}}
     restart: unless-stopped
     init: true
-    environment: *app-environment
+    environment:
+      NODE_ENV: production
+      APP_URL: ${APP_URL:?请在 .env 中设置 APP_URL}
+      AUTH_SECRET: ${AUTH_SECRET:?请在 .env 中设置 AUTH_SECRET}
+      VISITOR_HASH_SECRET: ${VISITOR_HASH_SECRET:?请在 .env 中设置 VISITOR_HASH_SECRET}
+      SETUP_TOKEN: ${SETUP_TOKEN:?请在 .env 中设置 SETUP_TOKEN}
+      TRUSTED_ORIGINS: ${TRUSTED_ORIGINS:?请在 .env 中设置 TRUSTED_ORIGINS}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      DATABASE_PATH: /app/data/blog.db
+      UPLOAD_DIR: /app/data/uploads
     ports:
       - "${BIND_ADDRESS:-127.0.0.1}:${PORT:-3000}:3000"
     volumes:
       - ./data:/app/data
     healthcheck:
       test:
-        [
-          "CMD",
-          "node",
-          "-e",
-          "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
-        ]
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
       interval: 30s
       timeout: 5s
       start_period: 10s
       retries: 3
 
+  # 数据库迁移：docker compose --profile tools run --rm migrate
   migrate:
-    image: ${SORA_IMAGE:-sora-blog:local}
-    build:
-      context: .
+    image: ${SORA_IMAGE:-ghcr.io/lateautumn2/sora:${SORA_VERSION:-latest}}
     profiles: ["tools"]
-    environment: *app-environment
+    environment:
+      DATABASE_PATH: /app/data/blog.db
+      UPLOAD_DIR: /app/data/uploads
     volumes:
       - ./data:/app/data
     command: ["node", "scripts/migrate.mjs"]
 
+  # 离线备份：docker compose --profile tools run --rm backup
   backup:
-    image: ${SORA_IMAGE:-sora-blog:local}
-    build:
-      context: .
+    image: ${SORA_IMAGE:-ghcr.io/lateautumn2/sora:${SORA_VERSION:-latest}}
     profiles: ["tools"]
-    environment: *app-environment
+    environment:
+      DATABASE_PATH: /app/data/blog.db
+      UPLOAD_DIR: /app/data/uploads
     volumes:
       - ./data:/app/data
       - ./backups:/app/backups
     command: ["node", "scripts/backup.mjs", "--output", "/app/backups"]
 
+  # 离线恢复：RESTORE_BACKUP=备份目录名 docker compose --profile tools run --rm restore
   restore:
-    image: ${SORA_IMAGE:-sora-blog:local}
-    build:
-      context: .
+    image: ${SORA_IMAGE:-ghcr.io/lateautumn2/sora:${SORA_VERSION:-latest}}
     profiles: ["tools"]
-    environment: *app-environment
+    environment:
+      DATABASE_PATH: /app/data/blog.db
+      UPLOAD_DIR: /app/data/uploads
     volumes:
       - ./data:/app/data
       - ./backups:/app/backups:ro
     command:
-      [
-        "node",
-        "scripts/restore.mjs",
-        "/app/backups/${RESTORE_BACKUP:-set-RESTORE_BACKUP}",
-        "--confirm",
-      ]
-
-  content-package:
-    image: ${SORA_IMAGE:-sora-blog:local}
-    build:
-      context: .
-    profiles: ["tools"]
-    environment: *app-environment
-    volumes:
-      - ./data:/app/data
-      - ${CONTENT_PACKAGE:-./converted/halo}:/app/import:ro
-    command:
-      [
-        "node",
-        "scripts/content-import.mjs",
-        "${CONTENT_COMMAND:-analyze}",
-        "--source",
-        "/app/import",
-      ]
+      - node
+      - scripts/restore.mjs
+      - "/app/backups/${RESTORE_BACKUP:?请设置 RESTORE_BACKUP}"
+      - --confirm

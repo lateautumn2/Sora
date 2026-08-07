@@ -473,6 +473,12 @@ export function deleteTaxonomy(type: "category" | "tag", id: string): void {
 export const defaultSiteSettings: SiteSettings = siteSettingsSchema.parse({});
 
 export function getSiteSettings(): SiteSettings {
+  // Next.js 构建阶段（next build）会预渲染 /_not-found 等静态页面并调用本函数，
+  // 此时运行库尚未建表。直接返回默认值，避免镜像构建依赖运行时数据库。
+  if (process.env.NEXT_PHASE === "phase-production-build") {
+    return defaultSiteSettings;
+  }
+
   const row = getDatabaseConnection()
     .sqlite.prepare("SELECT value_json AS valueJson FROM settings WHERE key = 'site'")
     .get() as { valueJson: string } | undefined;
