@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, test, vi } from "vitest";
 
 import { FriendManager } from "@/components/admin/friend-manager";
@@ -14,10 +14,12 @@ vi.mock("@/app/(admin)/admin/taxonomy-actions", () => ({
   saveTagAction: vi.fn(),
 }));
 
-vi.mock("@/app/(admin)/admin/menus/actions", () => ({
+const actionMocks = vi.hoisted(() => ({
   deleteMenuItemAction: vi.fn(),
-  saveMenuItemAction: vi.fn(),
+  saveMenuItemAction: vi.fn().mockResolvedValue({ status: "idle" }),
 }));
+
+vi.mock("@/app/(admin)/admin/menus/actions", () => actionMocks);
 
 vi.mock("@/app/(admin)/admin/friends/actions", () => ({
   deleteFriendLinkAction: vi.fn(),
@@ -131,5 +133,45 @@ describe("admin record managers", () => {
       "Friend 1",
     );
     expect(screen.getByRole("switch", { name: "启用 Friend 1" })).toBeChecked();
+  });
+
+  test("menu enabled switch only submits with the dialog form and resets after reopening", async () => {
+    render(
+      <MenuManager
+        items={[
+          {
+            enabled: true,
+            id: "00000000-0000-4000-8000-000000000002",
+            label: "关于",
+            openInNewTab: false,
+            sortOrder: 0,
+            url: "/about",
+          },
+        ]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "新建菜单" }));
+    const createDialog = screen.getByRole("dialog");
+    fireEvent.click(within(createDialog).getByRole("switch", { name: "启用 新菜单" }));
+    expect(actionMocks.saveMenuItemAction).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "关闭" }));
+    fireEvent.click(screen.getByRole("button", { name: "新建菜单" }));
+    expect(screen.getByRole("switch", { name: "启用 新菜单" })).toBeChecked();
+
+    fireEvent.click(screen.getByRole("button", { name: "关闭" }));
+    fireEvent.click(screen.getByRole("button", { name: "编辑 关于" }));
+    const editDialog = screen.getByRole("dialog");
+    fireEvent.click(within(editDialog).getByRole("switch", { name: "启用 关于" }));
+    expect(actionMocks.saveMenuItemAction).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "关闭" }));
+    fireEvent.click(screen.getByRole("button", { name: "编辑 关于" }));
+    expect(screen.getByRole("switch", { name: "启用 关于" })).toBeChecked();
+
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "保存菜单" }));
+    await waitFor(() => expect(actionMocks.saveMenuItemAction).toHaveBeenCalledTimes(1));
+
+    const formData = actionMocks.saveMenuItemAction.mock.calls[0]?.[1] as FormData;
+    expect(formData.get("enabled")).toBe("on");
   });
 });

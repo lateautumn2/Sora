@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { createRef } from "react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -92,10 +93,15 @@ describe("admin overlays", () => {
     vi.useFakeTimers();
 
     try {
-      render(
+      const triggerRef = createRef<HTMLButtonElement>();
+      const { container } = render(
         <Dialog
           title="编辑分类"
-          trigger={<IconButton aria-label="编辑记录">E</IconButton>}
+          trigger={
+            <IconButton aria-label="编辑记录" ref={triggerRef}>
+              E
+            </IconButton>
+          }
           triggerAsChild
         >
           内容
@@ -103,6 +109,8 @@ describe("admin overlays", () => {
       );
 
       const trigger = screen.getByRole("button", { name: "编辑记录" });
+      expect(triggerRef.current).toBe(trigger);
+      expect(container.querySelector("button button")).not.toBeInTheDocument();
       fireEvent.click(trigger);
       fireEvent.click(screen.getByRole("button", { name: "关闭" }));
       vi.runAllTimers();
@@ -122,17 +130,24 @@ describe("admin overlays", () => {
 
     try {
       const onConfirm = vi.fn();
-      render(
+      const triggerRef = createRef<HTMLButtonElement>();
+      const { container } = render(
         <ConfirmDialog
           description="此操作无法撤销"
           onConfirm={onConfirm}
           title="删除记录"
-          trigger={<IconButton aria-label="删除记录">D</IconButton>}
+          trigger={
+            <IconButton aria-label="删除记录" ref={triggerRef}>
+              D
+            </IconButton>
+          }
           triggerAsChild
         />,
       );
 
       const trigger = screen.getByRole("button", { name: "删除记录" });
+      expect(triggerRef.current).toBe(trigger);
+      expect(container.querySelector("button button")).not.toBeInTheDocument();
       fireEvent.click(trigger);
       fireEvent.click(screen.getByRole("button", { name: "确认删除" }));
       vi.runAllTimers();
