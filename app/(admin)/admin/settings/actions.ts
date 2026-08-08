@@ -9,10 +9,29 @@ import { requireAdminSession } from "@/lib/auth/admin";
 import { auth } from "@/lib/auth/server";
 import { saveSiteSettings } from "@/lib/content/service";
 import { siteSettingsSchema } from "@/lib/content/validation";
+import type { FormActionState } from "@/lib/forms/action-state";
 import { saveRuntimeConfig } from "@/lib/runtime-config";
 
-export async function saveSiteSettingsAction(formData: FormData): Promise<never> {
+export type SiteSettingsField =
+  | "title"
+  | "description"
+  | "authorName"
+  | "avatarUrl"
+  | "email"
+  | "githubUrl"
+  | "footerText";
+export type SiteSettingsActionState = FormActionState<SiteSettingsField>;
+export type RuntimeConfigActionState = FormActionState<"appUrl" | "trustedOrigins">;
+export type PasswordActionState = FormActionState<
+  "currentPassword" | "newPassword" | "confirmPassword"
+>;
+
+export async function saveSiteSettingsAction(
+  _previousState: SiteSettingsActionState,
+  formData: FormData,
+): Promise<SiteSettingsActionState> {
   await requireAdminSession();
+
   const result = siteSettingsSchema.safeParse({
     title: formData.get("title"),
     description: formData.get("description"),
@@ -25,8 +44,22 @@ export async function saveSiteSettingsAction(formData: FormData): Promise<never>
     requireCommentModeration: formData.get("requireCommentModeration") === "on",
   });
   if (!result.success) {
-    redirect("/admin/settings?notice=invalid");
+    const fields = result.error.flatten().fieldErrors;
+    return {
+      status: "error",
+      formError: "请检查设置内容。",
+      fieldErrors: {
+        title: fields.title?.[0],
+        description: fields.description?.[0],
+        authorName: fields.authorName?.[0],
+        avatarUrl: fields.avatarUrl?.[0],
+        email: fields.email?.[0],
+        githubUrl: fields.githubUrl?.[0],
+        footerText: fields.footerText?.[0],
+      },
+    };
   }
+
   saveSiteSettings(result.data);
   revalidatePath("/", "layout");
   redirect("/admin/settings?notice=saved");
@@ -37,8 +70,11 @@ const runtimeConfigFormSchema = z.object({
   trustedOrigins: z.string().trim().default(""),
 });
 
-/** 保存站点地址与可信来源，写入 runtime.json 并立即生效，无需重启容器。 */
-export async function saveRuntimeConfigAction(formData: FormData): Promise<never> {
+/** 保存站点地址与可信来源，归一化为 origin 后立即生效。 */
+export async function saveRuntimeConfigAction(
+  _previousState: RuntimeConfigActionState,
+  formData: FormData,
+): Promise<RuntimeConfigActionState> {
   await requireAdminSession();
 
   const result = runtimeConfigFormSchema.safeParse({
@@ -46,10 +82,14 @@ export async function saveRuntimeConfigAction(formData: FormData): Promise<never
     trustedOrigins: formData.get("trustedOrigins"),
   });
   if (!result.success) {
-    redirect("/admin/settings?notice=invalid-runtime");
+    const fields = result.error.flatten().fieldErrors;
+    return {
+      status: "error",
+      formError: "请检查运行配置。",
+      fieldErrors: { appUrl: fields.appUrl?.[0], trustedOrigins: fields.trustedOrigins?.[0] },
+    };
   }
 
-  // 来源按逗号分隔，逐项校验并统一归一化为 origin（去掉路径与末尾斜杠）。
   const trustedOrigins = result.data.trustedOrigins
     .split(",")
     .map((origin) => origin.trim())
@@ -61,7 +101,11 @@ export async function saveRuntimeConfigAction(formData: FormData): Promise<never
       trustedOrigins: normalizedOrigins,
     });
   } catch {
-    redirect("/admin/settings?notice=invalid-runtime");
+    return {
+      status: "error",
+      formError: "请检查运行配置。",
+      fieldErrors: { trustedOrigins: "可信来源格式不正确" },
+    };
   }
 
   revalidatePath("/", "layout");
@@ -78,14 +122,30 @@ const passwordSchema = z
     path: ["confirmPassword"],
   });
 
-export async function changePasswordAction(formData: FormData): Promise<never> {
+export async function changePasswordAction(
+  _previousState: PasswordActionState,
+  formData: FormData,
+): Promise<PasswordActionState> {
   await requireAdminSession();
+
   const result = passwordSchema.safeParse({
     currentPassword: formData.get("currentPassword"),
     newPassword: formData.get("newPassword"),
     confirmPassword: formData.get("confirmPassword"),
   });
-  if (!result.success) redirect("/admin/settings?notice=password-invalid");
+  if (!result.success) {
+    const fields = result.error.flatten().fieldErrors;
+    return {
+      status: "error",
+      formError: "请检查密码输入。",
+      fieldErrors: {
+        currentPassword: fields.currentPassword?.[0],
+        newPassword: fields.newPassword?.[0],
+        confirmPassword: fields.confirmPassword?.[0],
+      },
+    };
+  }
+
   try {
     await auth.api.changePassword({
       body: {
@@ -96,7 +156,11 @@ export async function changePasswordAction(formData: FormData): Promise<never> {
       headers: await headers(),
     });
   } catch {
-    redirect("/admin/settings?notice=password-current");
+    return {
+      status: "error",
+      fieldErrors: { currentPassword: "当前密码不正确" },
+    };
   }
+
   redirect("/admin/settings?notice=password-saved");
 }

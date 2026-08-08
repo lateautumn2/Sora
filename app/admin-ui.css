@@ -829,6 +829,136 @@
   padding: 0.625rem 0.75rem;
 }
 
+/* Task 4 keeps the editing canvas uninterrupted and moves metadata into a companion panel. */
+.admin-shell-layout .content-editor {
+  width: min(100%, 84rem);
+}
+
+.admin-shell-layout .content-editor-toolbar {
+  position: sticky;
+  z-index: 20;
+  top: 0;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--admin-border);
+  background: rgb(255 255 255 / 94%);
+  padding: 0.75rem 0;
+  backdrop-filter: blur(8px);
+}
+
+.content-editor-toolbar-back,
+.content-editor-toolbar-actions,
+.content-editor-trash-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.content-editor-toolbar-back {
+  min-height: 2.5rem;
+  color: var(--admin-text);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.content-editor-workspace {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 22rem);
+  align-items: start;
+  gap: 1.5rem;
+}
+
+.content-editor-main,
+.editor-settings-panel-fields,
+.settings-form-grid {
+  display: grid;
+  min-width: 0;
+  gap: 1rem;
+}
+
+.admin-shell-layout .content-editor-title {
+  border-bottom-color: var(--admin-border);
+  color: var(--admin-text);
+  font-size: 2rem;
+}
+
+.admin-shell-layout .content-editor-body .bytemd {
+  border-color: var(--admin-border);
+  border-radius: var(--admin-radius-surface);
+}
+
+.editor-settings-panel {
+  position: sticky;
+  top: 5.5rem;
+}
+
+.editor-settings-panel h2 {
+  margin: 0 0 1rem;
+  color: var(--admin-text);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.editor-settings-panel-options,
+.editor-settings-panel-seo,
+.settings-form-options {
+  display: grid;
+  min-width: 0;
+  gap: 0.75rem;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.editor-settings-panel-options legend,
+.editor-settings-panel-seo legend,
+.settings-form-options legend {
+  padding: 0;
+  color: var(--admin-text);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.editor-settings-panel-options label,
+.settings-form-options label {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--admin-text);
+  font-size: 0.875rem;
+}
+
+.editor-settings-panel-taxonomy {
+  display: grid;
+  gap: 1rem;
+}
+
+.editor-settings-panel-mobile {
+  display: none;
+}
+
+.content-editor-trash {
+  border-color: var(--admin-border);
+}
+
+.content-editor-trash-action {
+  min-height: 2.5rem;
+  border: 0;
+  background: transparent;
+  color: var(--admin-danger);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.settings-form-two-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
 @media (max-width: 40rem) {
   .admin-shell-topbar {
     padding: 0 1rem;
@@ -852,6 +982,10 @@
   .auth-shell-surface {
     padding: 1rem;
   }
+
+  .settings-form-two-columns {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 63.9375rem) {
@@ -860,5 +994,13 @@
   .admin-mobile-navigation-link {
     min-width: 2.75rem;
     min-height: 2.75rem;
+  }
+
+  .content-editor-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .editor-settings-panel-mobile {
+    display: block;
   }
 }

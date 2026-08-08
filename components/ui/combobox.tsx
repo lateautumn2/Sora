@@ -3,12 +3,13 @@
 import { Command } from "cmdk";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 import { Check, ChevronDown } from "lucide-react";
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 
 import type { SelectOption } from "./select";
 
 export interface ComboboxProps {
   name: string;
+  form?: string;
   label: string;
   options: SelectOption[];
   defaultValue?: string;
@@ -21,6 +22,7 @@ export interface ComboboxProps {
 export function Combobox({
   defaultValue,
   emptyMessage = "没有匹配项",
+  form,
   label,
   name,
   onValueChange,
@@ -30,6 +32,7 @@ export function Combobox({
 }: ComboboxProps) {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState(defaultValue ?? "");
+  const listboxId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const selectedOption = options.find((option) => option.value === value);
 
@@ -41,14 +44,16 @@ export function Combobox({
 
   return (
     <PopoverPrimitive.Root onOpenChange={setOpen} open={open}>
-      <input name={name} type="hidden" value={value} />
+      <input form={form} name={name} type="hidden" value={value} />
       <PopoverPrimitive.Trigger asChild>
         <button
+          aria-controls={listboxId}
           aria-expanded={open}
           aria-haspopup="listbox"
           aria-label={label}
           className="ui-select-trigger"
           ref={triggerRef}
+          role="combobox"
           type="button"
         >
           <span>{selectedOption?.label ?? placeholder}</span>
@@ -70,7 +75,7 @@ export function Combobox({
               className="ui-command-input"
               placeholder={searchLabel}
             />
-            <Command.List className="ui-command-list">
+            <Command.List className="ui-command-list" id={listboxId}>
               <Command.Empty className="ui-command-empty">{emptyMessage}</Command.Empty>
               {options.map((option) => (
                 <Command.Item

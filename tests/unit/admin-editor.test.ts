@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createElement } from "react";
@@ -17,6 +17,15 @@ vi.mock("@/app/(admin)/admin/content-actions", () => ({
   saveContentAction: vi.fn(),
   trashContentAction: vi.fn(),
 }));
+
+class ResizeObserverMock {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
+globalThis.ResizeObserver = ResizeObserverMock;
+HTMLElement.prototype.scrollIntoView = () => {};
 
 const categoryA = {
   id: "category-a",
@@ -89,34 +98,44 @@ describe("admin content editor", () => {
     expect(within(toolbar).queryByText(editorProps.content.title)).not.toBeInTheDocument();
   });
 
-  test("uses one category select and an accessible removable tag group", () => {
+  test("uses the editor settings panel and accessible shared selection controls", () => {
     render(createElement(ContentEditor, editorProps));
 
-    expect(screen.getByRole("combobox", { name: "分类" })).toHaveValue("category-a");
+    expect(document.querySelector(".editor-settings-panel")).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "状态" })).toHaveClass("ui-select-trigger");
 
-    fireEvent.click(screen.getByRole("button", { name: "选择标签" }));
-    expect(screen.getByRole("group", { name: "标签选项" })).toBeInTheDocument();
-    const tagBOption = screen.getByRole("button", { name: "Tag B" });
-    expect(tagBOption).toHaveAttribute("aria-pressed", "false");
-    fireEvent.click(tagBOption);
-    expect(tagBOption).toHaveAttribute("aria-pressed", "true");
+    const category = screen.getByRole("combobox", { name: "分类" });
+    expect(category).toHaveClass("ui-select-trigger");
+    expect(category).toHaveAttribute("aria-expanded", "false");
+
+    const tagsTrigger = screen.getByRole("button", { name: "选择标签" });
+    expect(tagsTrigger).toHaveClass("ui-multi-select-trigger");
+    fireEvent.click(tagsTrigger);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("checkbox", { name: "Tag B" }));
     expect(document.querySelectorAll('input[name="tagIds"]')).toHaveLength(2);
-
-    fireEvent.click(screen.getByRole("button", { name: "移除 Tag A" }));
-    expect(document.querySelectorAll('input[name="tagIds"]')).toHaveLength(1);
   });
 
-  test("closes the tag group with Escape and keeps focus on its trigger", () => {
+  test("closes the tag dialog with Escape and keeps focus on its trigger", () => {
+    vi.useFakeTimers();
     render(createElement(ContentEditor, editorProps));
     const trigger = screen.getByRole("button", { name: "选择标签" });
 
     fireEvent.click(trigger);
-    expect(screen.getByRole("group", { name: "标签选项" })).toBeInTheDocument();
-    trigger.focus();
-    fireEvent.keyDown(trigger, { key: "Escape" });
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+    vi.runAllTimers();
 
-    expect(screen.queryByRole("group", { name: "标签选项" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(trigger).toHaveFocus();
+    vi.useRealTimers();
+  });
+
+  test("omits post-only taxonomy and comment settings for pages", () => {
+    render(createElement(ContentEditor, { ...editorProps, kind: "PAGE" as const }));
+
+    expect(screen.queryByRole("combobox", { name: "分类" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "选择标签" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", { name: "允许评论" })).not.toBeInTheDocument();
   });
 
   test("constrains long tag chips while keeping the remove button stable", () => {
@@ -127,5 +146,24 @@ describe("admin content editor", () => {
     expect(chip).toContain("max-width: 100%;");
     expect(chip).toContain("overflow-wrap: anywhere;");
     expect(removeButton).toContain("flex: 0 0 1.1rem;");
+  });
+
+  test("uses a dialog for editor settings on mobile layouts", async () => {
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      value: () => ({
+        matches: true,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      }),
+    });
+
+    render(createElement(ContentEditor, editorProps));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "文章设置" })).toBeVisible();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "文章设置" }));
+    expect(screen.getByRole("dialog")).toHaveTextContent("文章设置");
   });
 });

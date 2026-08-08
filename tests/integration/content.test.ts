@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
+  getAdminContentById,
   getPublishedContentBySlug,
   getSiteSettings,
   listCategories,
@@ -130,6 +131,35 @@ describe("content service", () => {
         "test-agent",
       ),
     ).toThrowError(new InteractionError("COMMENTS_CLOSED"));
+  });
+
+  it("does not persist post taxonomy for page content", () => {
+    const categoryId = saveTaxonomy("category", {
+      name: "页面分类",
+      slug: "page-category",
+      description: "",
+    });
+    const tagId = saveTaxonomy("tag", {
+      name: "页面标签",
+      slug: "page-tag",
+      description: "",
+    });
+    const pageId = saveContent({
+      kind: "PAGE",
+      title: "页面内容",
+      slug: "page-content",
+      sourceContent: "正文",
+      sourceFormat: "MARKDOWN",
+      status: "DRAFT",
+      visibility: "PUBLIC",
+      allowComment: false,
+      pinned: false,
+      categoryIds: [categoryId],
+      tagIds: [tagId],
+    });
+
+    expect(getAdminContentById(pageId)?.categories).toEqual([]);
+    expect(getAdminContentById(pageId)?.tags).toEqual([]);
   });
 
   it("persists idempotent comments, moderation counts, views, upvotes, and rate limits", () => {

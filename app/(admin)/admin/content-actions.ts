@@ -6,10 +6,9 @@ import { redirect } from "next/navigation";
 import { requireAdminSession } from "@/lib/auth/admin";
 import { restoreContent, saveContent, trashContent } from "@/lib/content/service";
 import { contentInputSchema, normalizeSlug } from "@/lib/content/validation";
+import type { FormActionState } from "@/lib/forms/action-state";
 
-export interface ContentActionState {
-  error?: string;
-}
+export type ContentActionState = FormActionState;
 
 function formStrings(formData: FormData, name: string): string[] {
   return formData
@@ -44,7 +43,10 @@ export async function saveContentAction(
   });
 
   if (!result.success) {
-    return { error: result.error.issues[0]?.message ?? "请检查表单内容" };
+    return {
+      status: "error",
+      formError: result.error.issues[0]?.message ?? "请检查表单内容",
+    };
   }
 
   let id: string;
@@ -53,9 +55,9 @@ export async function saveContentAction(
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
     if (message.includes("posts.slug") || message.includes("UNIQUE constraint failed")) {
-      return { error: "URL 别名已经被其他内容使用" };
+      return { status: "error", formError: "URL 别名已经被其他内容使用" };
     }
-    return { error: "保存失败，请稍后重试" };
+    return { status: "error", formError: "保存失败，请稍后重试" };
   }
 
   revalidatePath("/", "layout");

@@ -13,6 +13,7 @@ export interface SelectOption {
 }
 
 export interface SelectFieldProps {
+  form?: string;
   name: string;
   label: string;
   options: SelectOption[];
@@ -28,7 +29,7 @@ interface SelectControlProps extends Omit<SelectFieldProps, "label" | "error"> {
 }
 
 const SelectControl = forwardRef<HTMLButtonElement, SelectControlProps>(function SelectControl(
-  { defaultValue, id, name, options, placeholder = "请选择", ...ariaProps },
+  { defaultValue, form, id, name, options, placeholder = "请选择", ...ariaProps },
   forwardedRef,
 ) {
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -45,7 +46,7 @@ const SelectControl = forwardRef<HTMLButtonElement, SelectControlProps>(function
 
   return (
     <SelectPrimitive.Root onValueChange={setValue} value={value}>
-      <input name={name} type="hidden" value={value} />
+      <input form={form} name={name} type="hidden" value={value} />
       <SelectPrimitive.Trigger
         {...ariaProps}
         className="ui-select-trigger"

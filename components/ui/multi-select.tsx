@@ -10,6 +10,7 @@ import type { SelectOption } from "./select";
 
 export interface MultiSelectProps {
   name: string;
+  form?: string;
   label: string;
   options: SelectOption[];
   defaultValue?: string[];
@@ -21,6 +22,7 @@ export interface MultiSelectProps {
 export function MultiSelect({
   defaultValue = [],
   emptyMessage = "没有匹配项",
+  form,
   label,
   name,
   options,
@@ -44,7 +46,7 @@ export function MultiSelect({
   return (
     <PopoverPrimitive.Root onOpenChange={setOpen} open={open}>
       {selectedValues.map((value) => (
-        <input key={value} name={name} type="hidden" value={value} />
+        <input form={form} key={value} name={name} type="hidden" value={value} />
       ))}
       <PopoverPrimitive.Trigger asChild>
         <button
