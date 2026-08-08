@@ -18,6 +18,8 @@ export interface SelectFieldProps {
   label: string;
   options: SelectOption[];
   defaultValue?: string;
+  value?: string;
+  onValueChange?: (value: string) => void;
   placeholder?: string;
   error?: string;
 }
@@ -29,11 +31,17 @@ interface SelectControlProps extends Omit<SelectFieldProps, "label" | "error"> {
 }
 
 const SelectControl = forwardRef<HTMLButtonElement, SelectControlProps>(function SelectControl(
-  { defaultValue, form, id, name, options, placeholder = "请选择", ...ariaProps },
+  { defaultValue, form, id, name, onValueChange, options, placeholder = "请选择", value, ...ariaProps },
   forwardedRef,
 ) {
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const [value, setValue] = useState(defaultValue ?? "");
+  const [uncontrolledValue, setUncontrolledValue] = useState(defaultValue ?? "");
+  const selectedValue = value ?? uncontrolledValue;
+
+  function handleValueChange(nextValue: string) {
+    if (value === undefined) setUncontrolledValue(nextValue);
+    onValueChange?.(nextValue);
+  }
 
   function setTriggerRef(element: HTMLButtonElement | null) {
     triggerRef.current = element;
@@ -45,8 +53,8 @@ const SelectControl = forwardRef<HTMLButtonElement, SelectControlProps>(function
   }
 
   return (
-    <SelectPrimitive.Root onValueChange={setValue} value={value}>
-      <input form={form} name={name} type="hidden" value={value} />
+    <SelectPrimitive.Root onValueChange={handleValueChange} value={selectedValue}>
+      <input form={form} name={name} type="hidden" value={selectedValue} />
       <SelectPrimitive.Trigger
         {...ariaProps}
         className="ui-select-trigger"

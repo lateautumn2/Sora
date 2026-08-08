@@ -83,7 +83,7 @@ const editorProps = {
 afterEach(cleanup);
 
 function cssRule(selector: string) {
-  const css = readFileSync(join(process.cwd(), "app", "globals.css"), "utf8");
+  const css = readFileSync(join(process.cwd(), "app", "admin-ui.css"), "utf8");
   return css.match(new RegExp(`\\${selector}\\s*\\{([\\s\\S]*?)\\n\\}`))?.[1] ?? "";
 }
 
@@ -139,16 +139,14 @@ describe("admin content editor", () => {
   });
 
   test("constrains long tag chips while keeping the remove button stable", () => {
-    const chip = cssRule(".taxonomy-tag-chip");
-    const removeButton = cssRule(".taxonomy-tag-chip button");
+    const chip = cssRule(".ui-multi-select-chip");
 
     expect(chip).toContain("min-width: 0;");
     expect(chip).toContain("max-width: 100%;");
     expect(chip).toContain("overflow-wrap: anywhere;");
-    expect(removeButton).toContain("flex: 0 0 1.1rem;");
   });
 
-  test("uses a dialog for editor settings on mobile layouts", async () => {
+  test("keeps mobile metadata in the main form after closing the settings dialog", async () => {
     Object.defineProperty(window, "matchMedia", {
       configurable: true,
       value: () => ({
@@ -164,6 +162,63 @@ describe("admin content editor", () => {
       expect(screen.getByRole("button", { name: "文章设置" })).toBeVisible();
     });
     fireEvent.click(screen.getByRole("button", { name: "文章设置" }));
-    expect(screen.getByRole("dialog")).toHaveTextContent("文章设置");
+
+    fireEvent.click(screen.getByRole("combobox", { name: "状态" }));
+    fireEvent.click(screen.getByRole("option", { name: "已发布" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "URL 别名" }), {
+      target: { value: "mobile-edited" },
+    });
+    fireEvent.click(screen.getByRole("combobox", { name: "分类" }));
+    fireEvent.click(screen.getByRole("option", { name: "Category B" }));
+    fireEvent.click(screen.getByRole("button", { name: "选择标签" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Tag B" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "允许评论" }));
+    fireEvent.click(screen.getByRole("button", { name: "关闭" }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+    const form = document.getElementById("content-editor-form") as HTMLFormElement;
+    const formData = new FormData(form);
+
+    expect(formData.getAll("status")).toEqual(["PUBLISHED"]);
+    expect(formData.getAll("slug")).toEqual(["mobile-edited"]);
+    expect(formData.getAll("categoryIds")).toEqual(["category-b"]);
+    expect(formData.getAll("tagIds")).toEqual(["tag-a", "tag-b"]);
+    expect(formData.getAll("allowComment")).toEqual([]);
+  });
+
+  test("does not bridge post-only metadata for page dialogs", async () => {
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      value: () => ({
+        matches: true,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      }),
+    });
+    render(
+      createElement(ContentEditor, {
+        ...editorProps,
+        kind: "PAGE" as const,
+        content: { ...editorProps.content, kind: "PAGE" as const, categories: [], tags: [] },
+      }),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "文章设置" })).toBeVisible();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "文章设置" }));
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+    const formData = new FormData(document.getElementById("content-editor-form") as HTMLFormElement);
+
+    expect(formData.getAll("categoryIds")).toEqual([]);
+    expect(formData.getAll("tagIds")).toEqual([]);
+    expect(formData.getAll("allowComment")).toEqual([]);
+    expect(formData.getAll("pinned")).toEqual([]);
   });
 });

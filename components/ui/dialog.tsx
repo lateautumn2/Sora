@@ -11,13 +11,15 @@ export interface DialogProps {
   title: string;
   children: ReactNode;
   description?: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function Dialog({ children, description, title, trigger }: DialogProps) {
+export function Dialog({ children, description, onOpenChange, open, title, trigger }: DialogProps) {
   const triggerRef = useRef<HTMLButtonElement>(null);
 
   return (
-    <DialogPrimitive.Root>
+    <DialogPrimitive.Root onOpenChange={onOpenChange} open={open}>
       <DialogPrimitive.Trigger asChild>
         <Button ref={triggerRef} type="button">
           {trigger}

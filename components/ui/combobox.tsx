@@ -13,6 +13,7 @@ export interface ComboboxProps {
   label: string;
   options: SelectOption[];
   defaultValue?: string;
+  value?: string;
   placeholder?: string;
   searchLabel?: string;
   emptyMessage?: string;
@@ -29,22 +30,24 @@ export function Combobox({
   options,
   placeholder = "请选择",
   searchLabel = "搜索选项",
+  value,
 }: ComboboxProps) {
   const [open, setOpen] = useState(false);
-  const [value, setValue] = useState(defaultValue ?? "");
+  const [uncontrolledValue, setUncontrolledValue] = useState(defaultValue ?? "");
+  const selectedValue = value ?? uncontrolledValue;
   const listboxId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const selectedOption = options.find((option) => option.value === value);
+  const selectedOption = options.find((option) => option.value === selectedValue);
 
   function selectValue(nextValue: string) {
-    setValue(nextValue);
+    if (value === undefined) setUncontrolledValue(nextValue);
     onValueChange?.(nextValue);
     setOpen(false);
   }
 
   return (
     <PopoverPrimitive.Root onOpenChange={setOpen} open={open}>
-      <input form={form} name={name} type="hidden" value={value} />
+      <input form={form} name={name} type="hidden" value={selectedValue} />
       <PopoverPrimitive.Trigger asChild>
         <button
           aria-controls={listboxId}
@@ -86,7 +89,7 @@ export function Combobox({
                   value={`${option.label} ${option.value}`}
                 >
                   <span>{option.label}</span>
-                  {value === option.value ? <Check aria-hidden="true" size={15} /> : null}
+                  {selectedValue === option.value ? <Check aria-hidden="true" size={15} /> : null}
                 </Command.Item>
               ))}
             </Command.List>

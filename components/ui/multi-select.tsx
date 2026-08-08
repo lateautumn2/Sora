@@ -14,6 +14,8 @@ export interface MultiSelectProps {
   label: string;
   options: SelectOption[];
   defaultValue?: string[];
+  value?: string[];
+  onValueChange?: (value: string[]) => void;
   placeholder?: string;
   searchLabel?: string;
   emptyMessage?: string;
@@ -25,22 +27,25 @@ export function MultiSelect({
   form,
   label,
   name,
+  onValueChange,
   options,
   placeholder,
   searchLabel = "搜索标签",
+  value: controlledValue,
 }: MultiSelectProps) {
   const [open, setOpen] = useState(false);
-  const [selectedValues, setSelectedValues] = useState(defaultValue);
+  const [uncontrolledValues, setUncontrolledValues] = useState(defaultValue);
+  const selectedValues = controlledValue ?? uncontrolledValues;
   const triggerRef = useRef<HTMLButtonElement>(null);
   const selectedOptions = options.filter((option) => selectedValues.includes(option.value));
   const triggerLabel = placeholder ?? `选择${label}`;
 
-  function toggleValue(value: string) {
-    setSelectedValues((currentValues) =>
-      currentValues.includes(value)
-        ? currentValues.filter((currentValue) => currentValue !== value)
-        : [...currentValues, value],
-    );
+  function toggleValue(nextValue: string) {
+    const nextValues = selectedValues.includes(nextValue)
+      ? selectedValues.filter((currentValue) => currentValue !== nextValue)
+      : [...selectedValues, nextValue];
+    if (controlledValue === undefined) setUncontrolledValues(nextValues);
+    onValueChange?.(nextValues);
   }
 
   return (
