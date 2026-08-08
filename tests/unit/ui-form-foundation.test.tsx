@@ -94,7 +94,7 @@ describe("admin form foundation", () => {
     const mobileStyles = adminUiStyles.split("@media (max-width: 40rem) {")[1] ?? "";
 
     expect(adminUiStyles).toContain("min-height: 2.5rem;");
-    expect(mobileStyles).toContain(".ui-button,\n  .ui-input {");
+    expect(mobileStyles).toContain(".ui-button,\n  .ui-input,");
     expect(mobileStyles).toContain("min-width: 2.75rem;");
     expect(mobileStyles).toContain("min-height: 2.75rem;");
     expect(mobileStyles).toContain(".ui-icon-button {");

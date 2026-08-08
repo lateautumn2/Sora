@@ -1,6 +1,15 @@
 import Link from "next/link";
 
+import { changeCommentStatusAction, replyCommentAction } from "@/app/(admin)/admin/comments/actions";
+import { AdminPage, AdminPageHeader } from "@/components/admin/admin-page";
+import { AdminSurface } from "@/components/admin/admin-surface";
+import { AdminTabs } from "@/components/admin/admin-tabs";
+import { AdminToolbar } from "@/components/admin/admin-toolbar";
 import { CommentAvatar } from "@/components/comment-avatar";
+import { Button } from "@/components/ui/button";
+import { Field } from "@/components/ui/field";
+import { Textarea } from "@/components/ui/textarea";
+import { Tooltip } from "@/components/ui/tooltip";
 import { PostPagination } from "@/components/site/post-pagination";
 import {
   countAdminCommentPosts,
@@ -10,12 +19,10 @@ import {
 } from "@/lib/comments/service";
 import { resolvePage, resolveTotalPages } from "@/lib/content/pagination";
 
-import { changeCommentStatusAction, replyCommentAction } from "./actions";
-
 const COMMENTS_PAGE_SIZE = 10;
 
-const filters: Array<{ label: string; value?: CommentStatus }> = [
-  { label: "全部" },
+const filters: Array<{ label: string; value: CommentStatus | "ALL" }> = [
+  { label: "全部", value: "ALL" },
   { label: "待审核", value: "PENDING" },
   { label: "已公开", value: "APPROVED" },
   { label: "垃圾", value: "SPAM" },
@@ -35,61 +42,54 @@ export default async function AdminCommentsPage({
   searchParams: Promise<{ status?: string; page?: string; notice?: string }>;
 }) {
   const query = await searchParams;
-  const status = filters.find((item) => item.value === query.status)?.value;
+  const activeFilter = filters.find((item) => item.value === query.status)?.value ?? "ALL";
+  const status = activeFilter === "ALL" ? undefined : activeFilter;
   const page = resolvePage(query.page);
   const total = countAdminCommentPosts(status);
   const groups = listAdminCommentPosts(status, COMMENTS_PAGE_SIZE, (page - 1) * COMMENTS_PAGE_SIZE);
-  const totalPages = resolveTotalPages(total, COMMENTS_PAGE_SIZE);
 
   return (
-    <div className="admin-page">
-      <header className="admin-page-header">
-        <div>
-          <h1>评论</h1>
-          <p>按文章查看讨论、审核状态与管理员回复</p>
-        </div>
-        <span className="admin-page-badge">{total} 篇文章</span>
-      </header>
-
-      {query.notice ? (
-        <p className="admin-notice mt-5" role="status">
-          {query.notice === "replied" ? "回复已公开" : "回复内容格式不正确"}
-        </p>
-      ) : null}
-
-      <nav aria-label="评论筛选" className="admin-filter-bar mt-6">
-        {filters.map((filter) => {
-          const active = status === filter.value;
-          return (
-            <Link
-              className={active ? "admin-filter admin-filter-active" : "admin-filter"}
-              href={filter.value ? `/admin/comments?status=${filter.value}` : "/admin/comments"}
-              key={filter.label}
-            >
-              {filter.label}
-            </Link>
-          );
-        })}
-      </nav>
+    <AdminPage>
+      <AdminPageHeader
+        actions={<span className="admin-count-badge">{total} 篇文章</span>}
+        description="按文章查看讨论、审核状态与管理员回复。"
+        title="评论"
+      >
+        {query.notice ? (
+          <p className="admin-notice" role="status">
+            {query.notice === "replied" ? "回复已公开" : "回复内容格式不正确"}
+          </p>
+        ) : null}
+        <AdminToolbar label="评论筛选">
+          <AdminTabs
+            activeValue={activeFilter}
+            label="评论状态"
+            tabs={filters.map((filter) => ({
+              href:
+                filter.value === "ALL"
+                  ? "/admin/comments"
+                  : `/admin/comments?status=${filter.value}`,
+              label: filter.label,
+              value: filter.value,
+            }))}
+          />
+        </AdminToolbar>
+      </AdminPageHeader>
 
       {groups.length === 0 ? (
-        <p className="admin-empty mt-6">当前筛选下没有评论</p>
+        <AdminSurface aria-label="评论列表">
+          <p className="admin-record-empty">当前筛选下没有评论</p>
+        </AdminSurface>
       ) : (
-        <div className="admin-comment-groups mt-6">
+        <div className="admin-comment-groups">
           {groups.map((group) => (
-            <section aria-labelledby={`comment-post-${group.postId}`} className="admin-panel" key={group.postId}>
+            <AdminSurface aria-labelledby={`comment-post-${group.postId}`} key={group.postId}>
               <header className="admin-comment-group-header">
-                <div className="min-w-0">
-                  <Link
-                    className="admin-comment-group-title"
-                    href={`/admin/posts/${group.postId}`}
-                    id={`comment-post-${group.postId}`}
-                  >
+                <div className="admin-data-primary">
+                  <Link href={`/admin/posts/${group.postId}`} id={`comment-post-${group.postId}`}>
                     {group.postTitle}
                   </Link>
-                  <p className="mt-1 truncate font-mono text-xs text-[var(--muted)]">
-                    /posts/{group.postSlug}
-                  </p>
+                  <span>/posts/{group.postSlug}</span>
                 </div>
                 <div className="admin-comment-group-meta">
                   <span>{group.commentCount} 条评论</span>
@@ -98,13 +98,12 @@ export default async function AdminCommentsPage({
                   </time>
                 </div>
               </header>
-
               <div className="admin-comment-list">
                 {group.comments.map((comment) => (
                   <AdminCommentRow comment={comment} key={comment.id} />
                 ))}
               </div>
-            </section>
+            </AdminSurface>
           ))}
         </div>
       )}
@@ -114,9 +113,10 @@ export default async function AdminCommentsPage({
         className="admin-pagination"
         extraQuery={status ? { status } : undefined}
         page={page}
-        totalPages={totalPages}
+        totalPages={resolveTotalPages(total, COMMENTS_PAGE_SIZE)}
+        variant="admin"
       />
-    </div>
+    </AdminPage>
   );
 }
 
@@ -124,59 +124,73 @@ function AdminCommentRow({ comment }: { comment: AdminComment }) {
   return (
     <article className="admin-comment-row">
       <CommentAvatar name={comment.authorName} size={40} />
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="font-medium">{comment.authorName}</span>
-          <span className={`admin-comment-status admin-comment-status-${comment.status.toLowerCase()}`}>
+      <div className="admin-comment-copy">
+        <div className="admin-comment-byline">
+          <strong>{comment.authorName}</strong>
+          <span className={`admin-status admin-status-${comment.status.toLowerCase()}`}>
             {statusLabels[comment.status]}
           </span>
-          <time className="text-xs text-[var(--muted)]" dateTime={new Date(comment.createdAt).toISOString()}>
+          <time dateTime={new Date(comment.createdAt).toISOString()}>
             {new Date(comment.createdAt).toLocaleString("zh-CN")}
           </time>
         </div>
-        <p className="mt-1 text-xs text-[var(--muted)]">{comment.authorEmail}</p>
+        <p className="admin-comment-email">{comment.authorEmail}</p>
         <div
-          className="prose-content admin-comment-content mt-3"
+          className="prose-content admin-comment-content"
           dangerouslySetInnerHTML={{ __html: comment.renderedHtml }}
         />
-        <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="admin-comment-actions">
           {comment.status !== "APPROVED" ? (
             <StatusButton id={comment.id} label="通过" status="APPROVED" />
           ) : null}
-          {comment.status !== "SPAM" ? <StatusButton id={comment.id} label="垃圾" status="SPAM" /> : null}
+          {comment.status !== "SPAM" ? (
+            <StatusButton id={comment.id} label="垃圾" status="SPAM" />
+          ) : null}
           {comment.status !== "TRASHED" ? (
-            <StatusButton id={comment.id} label="删除" status="TRASHED" />
+            <StatusButton danger id={comment.id} label="删除" status="TRASHED" />
           ) : (
             <StatusButton id={comment.id} label="恢复待审核" status="PENDING" />
           )}
         </div>
-        <form action={replyCommentAction} className="admin-comment-reply mt-4">
+        <form action={replyCommentAction} className="admin-comment-reply">
           <input name="parentId" type="hidden" value={comment.id} />
-          <input
-            aria-label={`回复 ${comment.authorName}`}
-            className="form-input min-w-0 flex-1"
-            maxLength={5000}
-            name="content"
-            placeholder={`以管理员身份公开回复 ${comment.authorName}`}
-            required
-          />
-          <button className="primary-button" type="submit">
-            回复
-          </button>
+          <Field label={`回复 ${comment.authorName}`}>
+            <Textarea
+              aria-label={`回复 ${comment.authorName}`}
+              maxLength={5000}
+              name="content"
+              placeholder={`以管理员身份公开回复 ${comment.authorName}`}
+              required
+              rows={3}
+            />
+          </Field>
+          <Button type="submit">回复</Button>
         </form>
       </div>
     </article>
   );
 }
 
-function StatusButton({ id, label, status }: { id: string; label: string; status: CommentStatus }) {
+function StatusButton({
+  danger = false,
+  id,
+  label,
+  status,
+}: {
+  danger?: boolean;
+  id: string;
+  label: string;
+  status: CommentStatus;
+}) {
   return (
     <form action={changeCommentStatusAction}>
       <input name="id" type="hidden" value={id} />
       <input name="status" type="hidden" value={status} />
-      <button className="admin-comment-action" type="submit">
-        {label}
-      </button>
+      <Tooltip content={label}>
+        <Button className={danger ? "ui-button-danger ui-button-compact" : "ui-button-secondary ui-button-compact"} type="submit">
+          {label}
+        </Button>
+      </Tooltip>
     </form>
   );
 }

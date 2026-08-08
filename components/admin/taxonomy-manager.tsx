@@ -148,6 +148,7 @@ export function TaxonomyManager({
           className="admin-pagination"
           page={page}
           totalPages={totalPages}
+          variant="admin"
         />
       </AdminSurface>
     </AdminPage>

@@ -2,14 +2,7 @@
 
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
-import {
-  cloneElement,
-  type ReactElement,
-  type ReactNode,
-  type Ref,
-  type RefObject,
-  useRef,
-} from "react";
+import type { ReactNode } from "react";
 
 import { Button, IconButton } from "./button";
 import { Tooltip } from "./tooltip";
@@ -25,25 +18,6 @@ export interface DialogProps {
   onOpenChange?: (open: boolean) => void;
 }
 
-type TriggerElementProps = { ref?: Ref<HTMLButtonElement> };
-
-function bindTriggerRef(
-  trigger: ReactElement<TriggerElementProps>,
-  triggerRef: RefObject<HTMLButtonElement | null>,
-) {
-  const childRef = trigger.props.ref;
-  return cloneElement(trigger, {
-    ref: (node: HTMLButtonElement | null) => {
-      triggerRef.current = node;
-      if (typeof childRef === "function") {
-        childRef(node);
-      } else if (childRef) {
-        (childRef as { current: HTMLButtonElement | null }).current = node;
-      }
-    },
-  });
-}
-
 export function Dialog({
   children,
   description,
@@ -54,14 +28,7 @@ export function Dialog({
   triggerAsChild = false,
   triggerTooltip,
 }: DialogProps) {
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const triggerElement = triggerAsChild ? (
-    bindTriggerRef(trigger as ReactElement<TriggerElementProps>, triggerRef)
-  ) : (
-    <Button ref={triggerRef} type="button">
-      {trigger}
-    </Button>
-  );
+  const triggerElement = triggerAsChild ? trigger : <Button type="button">{trigger}</Button>;
   const dialogTrigger = <DialogPrimitive.Trigger asChild>{triggerElement}</DialogPrimitive.Trigger>;
 
   return (
@@ -69,13 +36,7 @@ export function Dialog({
       {triggerTooltip ? <Tooltip content={triggerTooltip}>{dialogTrigger}</Tooltip> : dialogTrigger}
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="ui-dialog-overlay" />
-        <DialogPrimitive.Content
-          className="ui-dialog-content"
-          onCloseAutoFocus={(event) => {
-            event.preventDefault();
-            triggerRef.current?.focus();
-          }}
-        >
+        <DialogPrimitive.Content className="ui-dialog-content">
           <div className="ui-dialog-header">
             <div>
               <DialogPrimitive.Title className="ui-dialog-title">{title}</DialogPrimitive.Title>

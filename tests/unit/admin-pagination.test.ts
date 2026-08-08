@@ -1,12 +1,14 @@
 // @vitest-environment jsdom
 
 import { cleanup, render } from "@testing-library/react";
+import { createElement } from "react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import AdminCategoriesPage from "@/app/(admin)/admin/categories/page";
 import AdminMediaPage from "@/app/(admin)/admin/media/page";
 import AdminTagsPage from "@/app/(admin)/admin/tags/page";
 import { resolvePage } from "@/lib/content/pagination";
+import { PostPagination } from "@/components/site/post-pagination";
 
 const taxonomyTotal = 15;
 const mediaTotal = 16;
@@ -67,6 +69,25 @@ vi.mock("@/app/(admin)/admin/media/actions", () => ({
 afterEach(cleanup);
 
 describe("admin list pagination", () => {
+  test("keeps public pagination styling while exposing an admin variant", () => {
+    const { container, rerender } = render(
+      createElement(PostPagination, { basePath: "/", page: 1, totalPages: 2, variant: "site" }),
+    );
+    expect(container.querySelector(".sora-pagination")).toBeInTheDocument();
+    expect(container.querySelector(".ui-pagination")).not.toBeInTheDocument();
+
+    rerender(
+      createElement(PostPagination, {
+        basePath: "/admin/posts",
+        page: 1,
+        totalPages: 2,
+        variant: "admin",
+      }),
+    );
+    expect(container.querySelector(".ui-pagination")).toBeInTheDocument();
+    expect(container.querySelector(".sora-pagination")).not.toBeInTheDocument();
+  });
+
   test("accepts only safe complete positive decimal page numbers", () => {
     expect(resolvePage("2")).toBe(2);
     expect(resolvePage("002")).toBe(2);
@@ -81,7 +102,7 @@ describe("admin list pagination", () => {
     const page = await AdminCategoriesPage({ searchParams: Promise.resolve({}) });
     const { container } = render(page);
 
-    expect(container.querySelectorAll(".admin-taxonomy-row")).toHaveLength(10);
+    expect(container.querySelectorAll(".admin-record-row")).toHaveLength(10);
     expect(
       container.querySelector('nav[aria-label="\u5206\u9875"] a[href="/admin/categories?page=2"]'),
     ).toBeInTheDocument();
@@ -91,7 +112,7 @@ describe("admin list pagination", () => {
     const page = await AdminTagsPage({ searchParams: Promise.resolve({}) });
     const { container } = render(page);
 
-    expect(container.querySelectorAll(".admin-taxonomy-row")).toHaveLength(10);
+    expect(container.querySelectorAll(".admin-record-row")).toHaveLength(10);
     expect(
       container.querySelector('nav[aria-label="\u5206\u9875"] a[href="/admin/tags?page=2"]'),
     ).toBeInTheDocument();

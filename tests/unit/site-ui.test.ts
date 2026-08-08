@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createElement } from "react";
 import { describe, expect, test, vi } from "vitest";
@@ -73,6 +73,15 @@ vi.mock("@/lib/comments/service", () => ({ listPublicComments: () => [] }));
 vi.mock("@/components/site/post-interactions", () => ({ PostInteractions: () => null }));
 
 describe("Sora public UI", () => {
+  test("retains public typography, article images, navigation, and ByteMD vendor styles", () => {
+    const styles = readFileSync(join(process.cwd(), "app", "globals.css"), "utf8");
+
+    expect(styles).toMatch(/\.prose-content\s*\{/);
+    expect(styles).toMatch(/\.prose-content img\s*\{/);
+    expect(styles).toMatch(/\.sora-inner-navigation\s*\{/);
+    expect(styles).toContain(".bytemd");
+  });
+
   test("ships a site icon so browsers do not fall back to a missing favicon", () => {
     expect(existsSync(join(process.cwd(), "app", "icon.svg"))).toBe(true);
   });

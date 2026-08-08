@@ -233,6 +233,7 @@ export function FriendManager({ friends, notice, page, totalPages }: FriendManag
           className="admin-pagination"
           page={page}
           totalPages={totalPages}
+          variant="admin"
         />
       </AdminSurface>
     </AdminPage>

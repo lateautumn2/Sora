@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { z } from "zod";
 
 import { requireAdminSession } from "@/lib/auth/admin";
 import { deleteTaxonomy, saveTaxonomy } from "@/lib/content/service";
@@ -57,12 +58,12 @@ async function remove(
 ): Promise<TaxonomyActionState> {
   await requireAdminSession();
   const segment = type === "category" ? "categories" : "tags";
-  const id = String(formData.get("id") ?? "");
-  if (!id) {
+  const id = z.string().uuid().safeParse(formData.get("id"));
+  if (!id.success) {
     return { status: "error", fieldErrors: { id: "记录不存在。" }, formError: "删除失败。" };
   }
   try {
-    deleteTaxonomy(type, id);
+    deleteTaxonomy(type, id.data);
   } catch {
     return {
       status: "error",

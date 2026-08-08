@@ -5,27 +5,42 @@ import type { ReactNode } from "react";
 
 export interface TabItem {
   value: string;
-  label: string;
+  label: ReactNode;
   content: ReactNode;
   disabled?: boolean;
 }
 
 export interface TabsProps {
+  ariaLabel?: string;
   tabs: TabItem[];
   defaultValue?: string;
+  onValueChange?: (value: string) => void;
+  value?: string;
 }
 
-export function Tabs({ defaultValue, tabs }: TabsProps) {
+export function Tabs({
+  ariaLabel = "内容分组",
+  defaultValue,
+  onValueChange,
+  tabs,
+  value,
+}: TabsProps) {
   const initialValue = defaultValue ?? tabs[0]?.value;
 
   return (
-    <TabsPrimitive.Root className="ui-tabs" defaultValue={initialValue}>
-      <TabsPrimitive.List aria-label="内容分组" className="ui-tabs-list">
+    <TabsPrimitive.Root
+      className="ui-tabs"
+      defaultValue={initialValue}
+      onValueChange={onValueChange}
+      value={value}
+    >
+      <TabsPrimitive.List aria-label={ariaLabel} className="ui-tabs-list">
         {tabs.map((tab) => (
           <TabsPrimitive.Trigger
             className="ui-tabs-trigger"
             disabled={tab.disabled}
             key={tab.value}
+            onClick={() => onValueChange?.(tab.value)}
             value={tab.value}
           >
             {tab.label}
