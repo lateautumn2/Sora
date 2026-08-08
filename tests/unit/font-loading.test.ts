@@ -8,6 +8,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
 import { FontStylesheets } from "@/components/font-stylesheets";
+import nextConfig from "@/next.config";
 
 function renderFontMarkup() {
   const container = document.createElement("div");
@@ -16,6 +17,26 @@ function renderFontMarkup() {
 }
 
 describe("font loading", () => {
+  test("allows both ZeoSeven origins to serve stylesheets and font files", async () => {
+    const headerRules = await nextConfig.headers?.();
+    const contentSecurityPolicy = headerRules
+      ?.flatMap((rule) => rule.headers)
+      .find((header) => header.key === "Content-Security-Policy")?.value;
+
+    expect(contentSecurityPolicy).toBeDefined();
+
+    const directives = new Map(
+      contentSecurityPolicy
+        ?.split("; ")
+        .map((directive) => directive.split(" "))
+        .map(([name, ...sources]) => [name, sources]),
+    );
+    const fontOrigins = ["https://fontsapi.zeoseven.com", "https://fontsapi-storage.zeoseven.com"];
+
+    expect(directives.get("style-src")).toEqual(expect.arrayContaining(fontOrigins));
+    expect(directives.get("font-src")).toEqual(expect.arrayContaining(fontOrigins));
+  });
+
   test("loads the three reference ZeoSeven stylesheets", () => {
     const container = renderFontMarkup();
     const links = Array.from(container.querySelectorAll("link[data-font-stylesheet]"));
@@ -55,11 +76,18 @@ describe("font loading", () => {
   test("ships the local HarmonyOS subsets and links all font sources", () => {
     const fontDirectory = join(process.cwd(), "public", "fonts", "HarmonyOS_Sans_SC");
     const layout = readFileSync(join(process.cwd(), "app", "layout.tsx"), "utf8");
+    const fontCss = readFileSync(join(fontDirectory, "main.css"), "utf8");
+    const referencedFonts = Array.from(
+      fontCss.matchAll(/url\("\.\/(.+?\.woff2)"\)/g),
+      (match) => match[1],
+    ).sort();
+    const shippedFonts = readdirSync(fontDirectory)
+      .filter((file) => file.endsWith(".woff2"))
+      .sort();
 
     expect(existsSync(join(fontDirectory, "main.css"))).toBe(true);
-    expect(
-      readdirSync(fontDirectory).filter((file) => file.endsWith(".woff2")).length,
-    ).toBeGreaterThan(100);
+    expect(referencedFonts).toHaveLength(164);
+    expect(shippedFonts).toEqual(referencedFonts);
     expect(layout).toContain('href="https://fontsapi.zeoseven.com"');
     expect(layout).toContain('rel="preconnect"');
     expect(layout).toContain('href="/fonts/HarmonyOS_Sans_SC/main.css"');
