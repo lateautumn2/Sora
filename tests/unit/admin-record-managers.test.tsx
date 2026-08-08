@@ -135,7 +135,7 @@ describe("admin record managers", () => {
     expect(screen.getByRole("switch", { name: "启用 Friend 1" })).toBeChecked();
   });
 
-  test("menu enabled switch only submits with the dialog form and resets after reopening", async () => {
+  test("menu enabled switch submits false only with the form and resets after reopening", async () => {
     render(
       <MenuManager
         items={[
@@ -151,27 +151,24 @@ describe("admin record managers", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "新建菜单" }));
-    const createDialog = screen.getByRole("dialog");
-    fireEvent.click(within(createDialog).getByRole("switch", { name: "启用 新菜单" }));
-    expect(actionMocks.saveMenuItemAction).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "关闭" }));
-    fireEvent.click(screen.getByRole("button", { name: "新建菜单" }));
-    expect(screen.getByRole("switch", { name: "启用 新菜单" })).toBeChecked();
-
-    fireEvent.click(screen.getByRole("button", { name: "关闭" }));
     fireEvent.click(screen.getByRole("button", { name: "编辑 关于" }));
     const editDialog = screen.getByRole("dialog");
-    fireEvent.click(within(editDialog).getByRole("switch", { name: "启用 关于" }));
+    const enabledSwitch = within(editDialog).getByRole("switch", { name: "启用 关于" });
+    expect(enabledSwitch).toBeChecked();
+    fireEvent.click(enabledSwitch);
+    expect(enabledSwitch).not.toBeChecked();
     expect(actionMocks.saveMenuItemAction).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "关闭" }));
     fireEvent.click(screen.getByRole("button", { name: "编辑 关于" }));
     expect(screen.getByRole("switch", { name: "启用 关于" })).toBeChecked();
 
+    fireEvent.click(screen.getByRole("switch", { name: "启用 关于" }));
+    expect(screen.getByRole("switch", { name: "启用 关于" })).not.toBeChecked();
     fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "保存菜单" }));
     await waitFor(() => expect(actionMocks.saveMenuItemAction).toHaveBeenCalledTimes(1));
 
     const formData = actionMocks.saveMenuItemAction.mock.calls[0]?.[1] as FormData;
-    expect(formData.get("enabled")).toBe("on");
+    expect(formData.has("enabled")).toBe(false);
+    expect(formData.get("enabled")).toBeNull();
   });
 });
