@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { requireAdminSession } from "@/lib/auth/admin";
 import { deletePrimaryMenuItem, savePrimaryMenuItem } from "@/lib/content/service";
+import type { FormActionState } from "@/lib/forms/action-state";
 
 const menuItemSchema = z.object({
   id: z.string().uuid().optional(),
@@ -19,7 +20,12 @@ const menuItemSchema = z.object({
   enabled: z.boolean(),
 });
 
-export async function saveMenuItemAction(formData: FormData): Promise<never> {
+export type MenuItemActionState = FormActionState<"id" | "label" | "url" | "sortOrder">;
+
+export async function saveMenuItemAction(
+  _previousState: MenuItemActionState,
+  formData: FormData,
+): Promise<MenuItemActionState> {
   await requireAdminSession();
   const result = menuItemSchema.safeParse({
     id: formData.get("id") || undefined,
@@ -29,15 +35,34 @@ export async function saveMenuItemAction(formData: FormData): Promise<never> {
     openInNewTab: formData.has("openInNewTab"),
     enabled: formData.has("enabled"),
   });
-  if (!result.success) redirect("/admin/menus?notice=invalid");
+  if (!result.success) {
+    const fields = result.error.flatten().fieldErrors;
+    return {
+      status: "error",
+      formError: "请检查菜单信息。",
+      fieldErrors: {
+        id: fields.id?.[0],
+        label: fields.label?.[0],
+        sortOrder: fields.sortOrder?.[0],
+        url: fields.url?.[0],
+      },
+    };
+  }
   savePrimaryMenuItem(result.data);
   revalidatePath("/", "layout");
   redirect("/admin/menus?notice=saved");
 }
 
-export async function deleteMenuItemAction(formData: FormData): Promise<never> {
+export async function deleteMenuItemAction(
+  _previousState: MenuItemActionState,
+  formData: FormData,
+): Promise<MenuItemActionState> {
   await requireAdminSession();
-  deletePrimaryMenuItem(String(formData.get("id") ?? ""));
+  const id = z.string().uuid().safeParse(formData.get("id"));
+  if (!id.success) {
+    return { status: "error", fieldErrors: { id: "菜单项不存在。" }, formError: "删除失败。" };
+  }
+  deletePrimaryMenuItem(id.data);
   revalidatePath("/", "layout");
   redirect("/admin/menus?notice=deleted");
 }

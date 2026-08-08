@@ -1,14 +1,19 @@
 "use client";
 
 import * as DialogPrimitive from "@radix-ui/react-dialog";
+import type { ReactElement, ReactNode } from "react";
 import { useRef, useState } from "react";
 
 import { Button } from "./button";
+import { Tooltip } from "./tooltip";
 
 export interface ConfirmDialogProps {
   title: string;
   description: string;
   onConfirm: () => void;
+  trigger?: ReactNode;
+  triggerAsChild?: boolean;
+  triggerTooltip?: ReactNode;
   triggerLabel?: string;
   confirmLabel?: string;
   cancelLabel?: string;
@@ -20,6 +25,9 @@ export function ConfirmDialog({
   description,
   onConfirm,
   title,
+  trigger,
+  triggerAsChild = false,
+  triggerTooltip,
   triggerLabel = title,
 }: ConfirmDialogProps) {
   const [open, setOpen] = useState(false);
@@ -32,11 +40,29 @@ export function ConfirmDialog({
 
   return (
     <DialogPrimitive.Root onOpenChange={setOpen} open={open}>
-      <DialogPrimitive.Trigger asChild>
-        <Button ref={triggerRef} type="button">
-          {triggerLabel}
-        </Button>
-      </DialogPrimitive.Trigger>
+      {triggerTooltip ? (
+        <Tooltip content={triggerTooltip}>
+          <DialogPrimitive.Trigger asChild>
+            {triggerAsChild ? (
+              (trigger as ReactElement)
+            ) : (
+              <Button ref={triggerRef} type="button">
+                {trigger ?? triggerLabel}
+              </Button>
+            )}
+          </DialogPrimitive.Trigger>
+        </Tooltip>
+      ) : (
+        <DialogPrimitive.Trigger asChild>
+          {triggerAsChild ? (
+            (trigger as ReactElement)
+          ) : (
+            <Button ref={triggerRef} type="button">
+              {trigger ?? triggerLabel}
+            </Button>
+          )}
+        </DialogPrimitive.Trigger>
+      )}
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="ui-dialog-overlay" />
         <DialogPrimitive.Content
@@ -45,6 +71,7 @@ export function ConfirmDialog({
             event.preventDefault();
             triggerRef.current?.focus();
           }}
+          role="alertdialog"
         >
           <DialogPrimitive.Title className="ui-dialog-title">{title}</DialogPrimitive.Title>
           <DialogPrimitive.Description className="ui-dialog-description">

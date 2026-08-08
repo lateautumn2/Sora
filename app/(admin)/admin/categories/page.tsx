@@ -2,8 +2,6 @@ import { TaxonomyManager } from "@/components/admin/taxonomy-manager";
 import { resolvePage, resolveTotalPages } from "@/lib/content/pagination";
 import { countTaxonomies, listCategories } from "@/lib/content/service";
 
-import { deleteCategoryAction, saveCategoryAction } from "../taxonomy-actions";
-
 export default async function AdminCategoriesPage({
   searchParams,
 }: {
@@ -15,14 +13,13 @@ export default async function AdminCategoriesPage({
   const total = countTaxonomies("category");
   return (
     <TaxonomyManager
-      deleteAction={deleteCategoryAction}
       items={listCategories(true, pageSize, (page - 1) * pageSize)}
       notice={query.notice}
       noun="分类"
       page={page}
       totalPages={resolveTotalPages(total, pageSize)}
       basePath="/admin/categories"
-      saveAction={saveCategoryAction}
+      type="category"
     />
   );
 }

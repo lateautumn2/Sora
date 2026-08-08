@@ -785,6 +785,106 @@
   margin-top: 1rem;
 }
 
+/* Task 5 record managers keep dense, responsive rows while editing happens in dialogs. */
+.admin-record-list {
+  display: grid;
+  min-width: 0;
+}
+
+.admin-record-row {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 1rem;
+  border-bottom: 1px solid var(--admin-border);
+  padding: 1rem 0;
+}
+
+.admin-record-row:first-child {
+  padding-top: 0;
+}
+
+.admin-record-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.admin-record-row > .friend-logo {
+  width: 2.5rem;
+  height: 2.5rem;
+  grid-row: span 2;
+}
+
+.admin-record-copy,
+.admin-record-actions,
+.admin-record-switches,
+.admin-record-switches label {
+  min-width: 0;
+}
+
+.admin-record-copy h2,
+.admin-record-copy p,
+.admin-record-empty {
+  margin: 0;
+}
+
+.admin-record-copy h2 {
+  color: var(--admin-text);
+  font-size: 0.9375rem;
+  font-weight: 700;
+}
+
+.admin-record-copy p,
+.admin-record-meta {
+  overflow-wrap: anywhere;
+  color: var(--admin-muted);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.admin-record-copy p {
+  margin-top: 0.25rem;
+}
+
+.admin-record-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.admin-record-actions form {
+  display: contents;
+}
+
+.admin-record-delete-action {
+  color: var(--admin-danger);
+}
+
+.admin-record-dialog-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.admin-record-switches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.admin-record-switches label {
+  display: flex;
+  min-height: 2.5rem;
+  align-items: center;
+  gap: 0.375rem;
+  color: var(--admin-text);
+  font-size: 0.875rem;
+}
+
+.admin-pagination {
+  margin-top: 1.25rem;
+}
+
 .auth-shell {
   display: grid;
   min-height: 100vh;
@@ -985,6 +1085,19 @@
 
   .settings-form-two-columns {
     grid-template-columns: 1fr;
+  }
+
+  .admin-record-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.75rem;
+  }
+
+  .admin-record-row > .friend-logo {
+    grid-row: span 1;
+  }
+
+  .admin-record-meta {
+    grid-column: 1 / -1;
   }
 }
 

@@ -2,12 +2,15 @@
 
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
-import { type ReactNode, useRef } from "react";
+import { type ReactElement, type ReactNode, useRef } from "react";
 
 import { Button, IconButton } from "./button";
+import { Tooltip } from "./tooltip";
 
 export interface DialogProps {
   trigger: ReactNode;
+  triggerAsChild?: boolean;
+  triggerTooltip?: ReactNode;
   title: string;
   children: ReactNode;
   description?: string;
@@ -15,16 +18,43 @@ export interface DialogProps {
   onOpenChange?: (open: boolean) => void;
 }
 
-export function Dialog({ children, description, onOpenChange, open, title, trigger }: DialogProps) {
+export function Dialog({
+  children,
+  description,
+  onOpenChange,
+  open,
+  title,
+  trigger,
+  triggerAsChild = false,
+  triggerTooltip,
+}: DialogProps) {
   const triggerRef = useRef<HTMLButtonElement>(null);
 
   return (
     <DialogPrimitive.Root onOpenChange={onOpenChange} open={open}>
-      <DialogPrimitive.Trigger asChild>
-        <Button ref={triggerRef} type="button">
-          {trigger}
-        </Button>
-      </DialogPrimitive.Trigger>
+      {triggerTooltip ? (
+        <Tooltip content={triggerTooltip}>
+          <DialogPrimitive.Trigger asChild>
+            {triggerAsChild ? (
+              (trigger as ReactElement)
+            ) : (
+              <Button ref={triggerRef} type="button">
+                {trigger}
+              </Button>
+            )}
+          </DialogPrimitive.Trigger>
+        </Tooltip>
+      ) : (
+        <DialogPrimitive.Trigger asChild>
+          {triggerAsChild ? (
+            (trigger as ReactElement)
+          ) : (
+            <Button ref={triggerRef} type="button">
+              {trigger}
+            </Button>
+          )}
+        </DialogPrimitive.Trigger>
+      )}
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="ui-dialog-overlay" />
         <DialogPrimitive.Content

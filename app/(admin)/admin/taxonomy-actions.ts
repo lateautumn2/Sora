@@ -6,8 +6,15 @@ import { redirect } from "next/navigation";
 import { requireAdminSession } from "@/lib/auth/admin";
 import { deleteTaxonomy, saveTaxonomy } from "@/lib/content/service";
 import { normalizeSlug, taxonomyInputSchema } from "@/lib/content/validation";
+import type { FormActionState } from "@/lib/forms/action-state";
 
-async function save(type: "category" | "tag", formData: FormData): Promise<never> {
+export type TaxonomyActionState = FormActionState<"id" | "name" | "slug" | "description">;
+
+async function save(
+  type: "category" | "tag",
+  _previousState: TaxonomyActionState,
+  formData: FormData,
+): Promise<TaxonomyActionState> {
   await requireAdminSession();
   const segment = type === "category" ? "categories" : "tags";
   const result = taxonomyInputSchema.safeParse({
@@ -17,44 +24,80 @@ async function save(type: "category" | "tag", formData: FormData): Promise<never
     description: formData.get("description") ?? "",
   });
   if (!result.success) {
-    redirect(`/admin/${segment}?notice=invalid`);
+    const fields = result.error.flatten().fieldErrors;
+    return {
+      status: "error",
+      formError: "请检查分类信息。",
+      fieldErrors: {
+        description: fields.description?.[0],
+        id: fields.id?.[0],
+        name: fields.name?.[0],
+        slug: fields.slug?.[0],
+      },
+    };
   }
 
-  let notice = "saved";
   try {
     saveTaxonomy(type, result.data);
   } catch {
-    notice = "duplicate";
+    return {
+      status: "error",
+      formError: "名称或 URL 别名已经存在。",
+      fieldErrors: { name: "名称或 URL 别名已经存在。", slug: "名称或 URL 别名已经存在。" },
+    };
   }
   revalidatePath("/", "layout");
-  redirect(`/admin/${segment}?notice=${notice}`);
+  redirect(`/admin/${segment}?notice=saved`);
 }
 
-async function remove(type: "category" | "tag", formData: FormData): Promise<never> {
+async function remove(
+  type: "category" | "tag",
+  _previousState: TaxonomyActionState,
+  formData: FormData,
+): Promise<TaxonomyActionState> {
   await requireAdminSession();
   const segment = type === "category" ? "categories" : "tags";
-  let notice = "deleted";
+  const id = String(formData.get("id") ?? "");
+  if (!id) {
+    return { status: "error", fieldErrors: { id: "记录不存在。" }, formError: "删除失败。" };
+  }
   try {
-    deleteTaxonomy(type, String(formData.get("id") ?? ""));
+    deleteTaxonomy(type, id);
   } catch {
-    notice = "in-use";
+    return {
+      status: "error",
+      fieldErrors: { id: "该项仍被内容使用。" },
+      formError: "该项仍被内容使用，暂时不能删除。",
+    };
   }
   revalidatePath("/", "layout");
-  redirect(`/admin/${segment}?notice=${notice}`);
+  redirect(`/admin/${segment}?notice=deleted`);
 }
 
-export async function saveCategoryAction(formData: FormData): Promise<never> {
-  return save("category", formData);
+export async function saveCategoryAction(
+  previousState: TaxonomyActionState,
+  formData: FormData,
+): Promise<TaxonomyActionState> {
+  return save("category", previousState, formData);
 }
 
-export async function deleteCategoryAction(formData: FormData): Promise<never> {
-  return remove("category", formData);
+export async function deleteCategoryAction(
+  previousState: TaxonomyActionState,
+  formData: FormData,
+): Promise<TaxonomyActionState> {
+  return remove("category", previousState, formData);
 }
 
-export async function saveTagAction(formData: FormData): Promise<never> {
-  return save("tag", formData);
+export async function saveTagAction(
+  previousState: TaxonomyActionState,
+  formData: FormData,
+): Promise<TaxonomyActionState> {
+  return save("tag", previousState, formData);
 }
 
-export async function deleteTagAction(formData: FormData): Promise<never> {
-  return remove("tag", formData);
+export async function deleteTagAction(
+  previousState: TaxonomyActionState,
+  formData: FormData,
+): Promise<TaxonomyActionState> {
+  return remove("tag", previousState, formData);
 }

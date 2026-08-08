@@ -8,7 +8,6 @@ import { deleteFriendLinkAction, saveFriendLinkAction } from "@/app/(admin)/admi
 import AdminFriendsPage from "@/app/(admin)/admin/friends/page";
 import { AdminMobileNavigation } from "@/components/admin/admin-mobile-navigation";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
-import { FriendDeleteButton } from "@/components/admin/friend-delete-button";
 import { FriendLogo } from "@/components/friend-logo";
 
 const actionMocks = vi.hoisted(() => {
@@ -74,39 +73,31 @@ afterEach(() => {
 });
 
 describe("admin friend links", () => {
-  test("renders ten editable friend links and a second page", async () => {
+  test("renders ten friend links and a second page", async () => {
     const page = await AdminFriendsPage({ searchParams: Promise.resolve({}) });
     const { container } = render(page);
 
     expect(screen.getByRole("heading", { name: "友链" })).toBeVisible();
-    expect(container.querySelectorAll(".admin-friend-row")).toHaveLength(10);
+    expect(container.querySelectorAll(".admin-record-row")).toHaveLength(10);
     expect(container.querySelector('a[href="/admin/friends?page=2"]')).toBeInTheDocument();
   });
 
-  test("allows internal media paths in friend logo fields", async () => {
+  test("opens a friend form with a text logo field that accepts internal media paths", async () => {
     const page = await AdminFriendsPage({ searchParams: Promise.resolve({}) });
     render(page);
 
-    expect(screen.getByRole("textbox", { name: "友链 Logo 地址" })).toHaveAttribute(
-      "inputmode",
-      "url",
-    );
-    expect(screen.getByRole("textbox", { name: "友链 Logo 地址" })).toHaveAttribute(
-      "type",
-      "text",
-    );
-    expect(screen.getByRole("textbox", { name: "Friend 1 Logo 地址" })).toHaveAttribute(
-      "type",
-      "text",
-    );
+    fireEvent.click(screen.getByRole("button", { name: "新建友链" }));
+
+    expect(screen.getByRole("textbox", { name: "Logo 地址" })).toHaveAttribute("inputmode", "url");
+    expect(screen.getByRole("textbox", { name: "Logo 地址" })).toHaveAttribute("type", "text");
   });
 
   test("clamps an extreme page to the last available friend link page", async () => {
     const page = await AdminFriendsPage({ searchParams: Promise.resolve({ page: "999999" }) });
     const { container } = render(page);
 
-    expect(screen.getByDisplayValue("Friend 11")).toBeVisible();
-    expect(container.querySelector<HTMLInputElement>('form input[name="page"]')?.value).toBe("2");
+    expect(screen.getByText("Friend 11")).toBeVisible();
+    expect(container.querySelector<HTMLInputElement>('input[name="page"]')?.value).toBe("2");
   });
 
   test("desktop and mobile admin navigation expose friend links", () => {
@@ -120,7 +111,7 @@ describe("admin friend links", () => {
   });
 
   test("authenticates, treats a missing enabled checkbox as false, then revalidates before saving", async () => {
-    await expect(saveFriendLinkAction(validFriendForm())).rejects.toThrow(
+    await expect(saveFriendLinkAction({ status: "idle" }, validFriendForm())).rejects.toThrow(
       "NEXT_REDIRECT:/admin/friends?page=2&notice=saved",
     );
 
@@ -146,18 +137,21 @@ describe("admin friend links", () => {
   test("redirects invalid and duplicate saves without mutating data", async () => {
     const invalid = validFriendForm("2junk");
     invalid.set("name", "");
-    await expect(saveFriendLinkAction(invalid)).rejects.toThrow(
-      "NEXT_REDIRECT:/admin/friends?page=1&notice=invalid",
-    );
+    await expect(saveFriendLinkAction({ status: "idle" }, invalid)).resolves.toMatchObject({
+      status: "error",
+    });
     expect(actionMocks.saveFriendLink).not.toHaveBeenCalled();
 
     actionMocks.redirect.mockClear();
     actionMocks.saveFriendLink.mockImplementationOnce(() => {
       throw new actionMocks.FriendLinkConflictError();
     });
-    await expect(saveFriendLinkAction(validFriendForm())).rejects.toThrow(
-      "NEXT_REDIRECT:/admin/friends?page=2&notice=duplicate",
-    );
+    await expect(
+      saveFriendLinkAction({ status: "idle" }, validFriendForm()),
+    ).resolves.toMatchObject({
+      fieldErrors: { url: expect.any(String) },
+      status: "error",
+    });
     expect(actionMocks.revalidatePath).not.toHaveBeenCalled();
   });
 
@@ -166,7 +160,7 @@ describe("admin friend links", () => {
     formData.set("id", "00000000-0000-4000-8000-000000000001");
     formData.set("page", "2");
 
-    await expect(deleteFriendLinkAction(formData)).rejects.toThrow(
+    await expect(deleteFriendLinkAction({ status: "idle" }, formData)).rejects.toThrow(
       "NEXT_REDIRECT:/admin/friends?page=2&notice=deleted",
     );
 
@@ -189,29 +183,12 @@ describe("admin friend links", () => {
     formData.set("id", "not-a-uuid");
     formData.set("page", "9007199254740992");
 
-    await expect(deleteFriendLinkAction(formData)).rejects.toThrow(
-      "NEXT_REDIRECT:/admin/friends?page=1&notice=invalid",
-    );
+    await expect(deleteFriendLinkAction({ status: "idle" }, formData)).resolves.toMatchObject({
+      fieldErrors: { id: expect.any(String) },
+      status: "error",
+    });
     expect(actionMocks.requireAdminSession).toHaveBeenCalledOnce();
     expect(actionMocks.deleteFriendLink).not.toHaveBeenCalled();
-  });
-
-  test("requires confirmation before submitting a friend deletion", () => {
-    const onSubmit = vi.fn((event: SubmitEvent) => event.preventDefault());
-    const { rerender } = render(
-      createElement("form", { onSubmit }, createElement(FriendDeleteButton, { name: "Friend 1" })),
-    );
-    vi.spyOn(window, "confirm").mockReturnValue(false);
-
-    fireEvent.click(screen.getByRole("button", { name: "删除Friend 1" }));
-    expect(onSubmit).not.toHaveBeenCalled();
-
-    vi.spyOn(window, "confirm").mockReturnValue(true);
-    rerender(
-      createElement("form", { onSubmit }, createElement(FriendDeleteButton, { name: "Friend 1" })),
-    );
-    fireEvent.click(screen.getByRole("button", { name: "删除Friend 1" }));
-    expect(onSubmit).toHaveBeenCalledOnce();
   });
 
   test("falls back for empty Unicode logos and retries when a new source replaces a failed one", () => {

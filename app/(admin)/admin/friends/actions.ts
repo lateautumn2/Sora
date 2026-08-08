@@ -9,6 +9,11 @@ import { requireAdminSession } from "@/lib/auth/admin";
 import { resolvePage } from "@/lib/content/pagination";
 import { deleteFriendLink, FriendLinkConflictError, saveFriendLink } from "@/lib/friends/service";
 import { friendLinkInputSchema } from "@/lib/friends/validation";
+import type { FormActionState } from "@/lib/forms/action-state";
+
+export type FriendLinkActionState = FormActionState<
+  "id" | "name" | "url" | "logoUrl" | "description" | "sortOrder"
+>;
 
 function adminFriendsUrl(page: number, notice: "saved" | "deleted" | "invalid" | "duplicate") {
   return `/admin/friends?page=${page}&notice=${notice}` as Route;
@@ -23,7 +28,10 @@ function revalidateFriendLinks() {
   revalidatePath("/friends");
 }
 
-export async function saveFriendLinkAction(formData: FormData): Promise<never> {
+export async function saveFriendLinkAction(
+  _previousState: FriendLinkActionState,
+  formData: FormData,
+): Promise<FriendLinkActionState> {
   await requireAdminSession();
 
   const page = formPage(formData);
@@ -38,14 +46,30 @@ export async function saveFriendLinkAction(formData: FormData): Promise<never> {
   });
 
   if (!result.success) {
-    redirect(adminFriendsUrl(page, "invalid"));
+    const fields = result.error.flatten().fieldErrors;
+    return {
+      status: "error",
+      formError: "请检查友链信息。",
+      fieldErrors: {
+        description: fields.description?.[0],
+        id: fields.id?.[0],
+        logoUrl: fields.logoUrl?.[0],
+        name: fields.name?.[0],
+        sortOrder: fields.sortOrder?.[0],
+        url: fields.url?.[0],
+      },
+    };
   }
 
   try {
     saveFriendLink(result.data);
   } catch (error) {
     if (error instanceof FriendLinkConflictError) {
-      redirect(adminFriendsUrl(page, "duplicate"));
+      return {
+        status: "error",
+        formError: "该友链地址已存在。",
+        fieldErrors: { url: "该友链地址已存在。" },
+      };
     }
     throw error;
   }
@@ -54,13 +78,16 @@ export async function saveFriendLinkAction(formData: FormData): Promise<never> {
   redirect(adminFriendsUrl(page, "saved"));
 }
 
-export async function deleteFriendLinkAction(formData: FormData): Promise<never> {
+export async function deleteFriendLinkAction(
+  _previousState: FriendLinkActionState,
+  formData: FormData,
+): Promise<FriendLinkActionState> {
   await requireAdminSession();
 
   const page = formPage(formData);
   const id = z.string().uuid().safeParse(formData.get("id"));
   if (!id.success) {
-    redirect(adminFriendsUrl(page, "invalid"));
+    return { status: "error", fieldErrors: { id: "友链不存在。" }, formError: "删除失败。" };
   }
 
   deleteFriendLink(id.data);
