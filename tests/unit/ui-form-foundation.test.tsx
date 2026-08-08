@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 
 import { createRef } from "react";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, test } from "vitest";
 
@@ -59,5 +61,44 @@ describe("admin form foundation", () => {
     expect(screen.getByTestId("input")).toBeRequired();
     expect(screen.getByTestId("textarea")).toHaveAttribute("rows", "4");
     expect(screen.getByText("Save failed")).toHaveAttribute("role", "alert");
+  });
+
+  test("forwards refs and native div props through Field", () => {
+    const fieldRef = createRef<HTMLDivElement>();
+
+    render(
+      <Field aria-live="polite" data-testid="field" ref={fieldRef} label="Title">
+        <Input name="title" />
+      </Field>,
+    );
+
+    expect(fieldRef.current).toBe(screen.getByTestId("field"));
+    expect(screen.getByTestId("field")).toHaveAttribute("aria-live", "polite");
+  });
+
+  test("forwards refs and native paragraph props through FormMessage", () => {
+    const messageRef = createRef<HTMLParagraphElement>();
+
+    render(
+      <FormMessage data-testid="message" id="save-error" ref={messageRef}>
+        Save failed
+      </FormMessage>,
+    );
+
+    expect(messageRef.current).toBe(screen.getByTestId("message"));
+    expect(screen.getByTestId("message")).toHaveAttribute("id", "save-error");
+  });
+
+  test("defines 44px mobile touch targets while retaining 40px desktop controls", () => {
+    const adminUiStyles = readFileSync(join(process.cwd(), "app", "admin-ui.css"), "utf8");
+    const mobileStyles = adminUiStyles.split("@media (max-width: 40rem) {")[1] ?? "";
+
+    expect(adminUiStyles).toContain("min-height: 2.5rem;");
+    expect(mobileStyles).toContain(".ui-button,\n  .ui-input {");
+    expect(mobileStyles).toContain("min-width: 2.75rem;");
+    expect(mobileStyles).toContain("min-height: 2.75rem;");
+    expect(mobileStyles).toContain(".ui-icon-button {");
+    expect(mobileStyles).toContain("width: 2.75rem;");
+    expect(mobileStyles).toContain("height: 2.75rem;");
   });
 });

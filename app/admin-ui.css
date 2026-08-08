@@ -114,3 +114,16 @@
   font-size: 0.75rem;
   line-height: 1.5;
 }
+
+@media (max-width: 40rem) {
+  .ui-button,
+  .ui-input {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+
+  .ui-icon-button {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+}

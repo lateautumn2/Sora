@@ -1,5 +1,5 @@
-import { Children, cloneElement, isValidElement, useId } from "react";
-import type { AriaAttributes, ReactElement, ReactNode } from "react";
+import { Children, cloneElement, forwardRef, isValidElement, useId } from "react";
+import type { AriaAttributes, HTMLAttributes, ReactElement, ReactNode } from "react";
 
 import { cn } from "./cn";
 import { FormMessage } from "./form-message";
@@ -10,15 +10,17 @@ type FieldControlProps = {
   "aria-invalid"?: AriaAttributes["aria-invalid"];
 };
 
-interface FieldProps {
+export interface FieldProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactElement<FieldControlProps>;
-  className?: string;
   description?: ReactNode;
   error?: ReactNode;
   label: ReactNode;
 }
 
-export function Field({ children, className, description, error, label }: FieldProps) {
+export const Field = forwardRef<HTMLDivElement, FieldProps>(function Field(
+  { children, className, description, error, label, ...props },
+  ref,
+) {
   const generatedId = useId();
   const control = Children.only(children);
 
@@ -34,7 +36,7 @@ export function Field({ children, className, description, error, label }: FieldP
     .join(" ");
 
   return (
-    <div className={cn("ui-field", className)}>
+    <div className={cn("ui-field", className)} ref={ref} {...props}>
       <label className="ui-field-label" htmlFor={controlId}>
         {label}
       </label>
@@ -51,4 +53,4 @@ export function Field({ children, className, description, error, label }: FieldP
       {error ? <FormMessage id={errorId}>{error}</FormMessage> : null}
     </div>
   );
-}
+});
