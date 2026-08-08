@@ -58,5 +58,7 @@ export const adminNavigation: readonly AdminNavigationGroup[] = [
 ];
 
 export function isAdminNavigationActive(pathname: string, href: Route): boolean {
-  return href === "/admin" ? pathname === href : pathname.startsWith(href);
+  return href === "/admin"
+    ? pathname === href
+    : pathname === href || pathname.startsWith(`${href}/`);
 }

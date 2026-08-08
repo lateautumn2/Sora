@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import type { HTMLAttributes, ReactNode } from "react";
 
 import { cn } from "@/components/ui/cn";
@@ -7,15 +8,19 @@ interface AdminToolbarProps extends HTMLAttributes<HTMLDivElement> {
   label?: string;
 }
 
-export function AdminToolbar({
-  children,
-  className,
-  label = "页面工具栏",
-  ...props
-}: AdminToolbarProps) {
+export const AdminToolbar = forwardRef<HTMLDivElement, AdminToolbarProps>(function AdminToolbar(
+  { children, className, label = "页面工具栏", ...props },
+  ref,
+) {
   return (
-    <div aria-label={label} className={cn("admin-toolbar", className)} role="toolbar" {...props}>
+    <div
+      aria-label={label}
+      className={cn("admin-toolbar", className)}
+      ref={ref}
+      role="toolbar"
+      {...props}
+    >
       {children}
     </div>
   );
-}
+});

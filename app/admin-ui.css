@@ -713,6 +713,11 @@
 }
 
 .admin-page-template-header {
+  display: grid;
+  gap: 1rem;
+}
+
+.admin-page-template-header-main {
   display: flex;
   min-height: 6.5rem;
   align-items: center;
@@ -742,6 +747,10 @@
   flex: 0 0 auto;
   flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+.admin-page-template-extra {
+  min-width: 0;
 }
 
 .admin-toolbar {
@@ -834,7 +843,7 @@
     padding: 1rem;
   }
 
-  .admin-page-template-header {
+  .admin-page-template-header-main {
     align-items: flex-start;
     flex-direction: column;
   }
@@ -842,5 +851,14 @@
   .admin-surface,
   .auth-shell-surface {
     padding: 1rem;
+  }
+}
+
+@media (max-width: 63.9375rem) {
+  .admin-mobile-navigation-trigger,
+  .admin-mobile-navigation-header .ui-icon-button,
+  .admin-mobile-navigation-link {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
   }
 }
