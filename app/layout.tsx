@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { FontStylesheets } from "@/components/font-stylesheets";
 import { getSiteSettings } from "@/lib/content/service";
 import { getEnvironment } from "@/lib/env";
 
@@ -17,6 +18,12 @@ export function generateMetadata(): Metadata {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="zh-CN" data-scroll-behavior="smooth">
+      <head>
+        <link crossOrigin="anonymous" href="https://fontsapi.zeoseven.com" rel="preconnect" />
+        {/* eslint-disable-next-line @next/next/no-css-tags -- Preserve the upstream subset manifest. */}
+        <link href="/fonts/HarmonyOS_Sans_SC/main.css" rel="stylesheet" />
+        <FontStylesheets />
+      </head>
       <body>
         <a className="skip-link" href="#main-content">
           跳到正文

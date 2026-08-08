@@ -10,13 +10,13 @@ const contentSecurityPolicy = [
   "default-src 'self'",
   "base-uri 'self'",
   "connect-src 'self'",
-  "font-src 'self' data:",
+  "font-src 'self' data: https://fontsapi.zeoseven.com https://fontsapi-storage.zeoseven.com",
   "form-action 'self'",
   "frame-ancestors 'none'",
   "img-src 'self' data: https:",
   "object-src 'none'",
   `script-src ${scriptSources.join(" ")}`,
-  "style-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline' https://fontsapi.zeoseven.com https://fontsapi-storage.zeoseven.com",
 ].join("; ");
 
 const nextConfig: NextConfig = {
