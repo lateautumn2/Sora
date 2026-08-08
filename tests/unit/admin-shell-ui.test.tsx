@@ -89,7 +89,7 @@ describe("admin shell UI", () => {
 
   test("computes 44px mobile navigation targets at each active viewport", async () => {
     const adminUiStyles = readFileSync(join(process.cwd(), "app", "admin-ui.css"), "utf8");
-    const browser = await chromium.launch({ channel: "chrome", headless: true });
+    const browser = await chromium.launch();
 
     try {
       const page = await browser.newPage();
@@ -113,6 +113,8 @@ describe("admin shell UI", () => {
               return {
                 height: Number.parseFloat(style.height),
                 minHeight: Number.parseFloat(style.minHeight),
+                minWidth: Number.parseFloat(style.minWidth),
+                width: Number.parseFloat(style.width),
               };
             }),
           );
@@ -121,11 +123,25 @@ describe("admin shell UI", () => {
         for (const target of dimensions) {
           expect(target.minHeight).toBeGreaterThanOrEqual(44);
           expect(target.height).toBeGreaterThanOrEqual(44);
+          expect(target.minWidth).toBeGreaterThanOrEqual(44);
+          expect(target.width).toBeGreaterThanOrEqual(44);
         }
       }
     } finally {
       await browser.close();
     }
+  });
+
+  test("installs bundled Chromium before CI unit tests", () => {
+    const workflow = readFileSync(join(process.cwd(), ".github", "workflows", "ci.yml"), "utf8");
+    const chromiumInstall = workflow.indexOf("pnpm exec playwright install --with-deps chromium");
+    const unitTests = workflow.indexOf("- run: pnpm test");
+
+    expect(chromiumInstall).toBeGreaterThan(-1);
+    expect(chromiumInstall).toBeLessThan(unitTests);
+    expect(
+      workflow.indexOf("pnpm exec playwright install --with-deps chromium", chromiumInstall + 1),
+    ).toBe(-1);
   });
 
   test("page composition components forward refs and native props while retaining header children", () => {
