@@ -165,60 +165,87 @@
 }
 
 .ui-checkbox {
+  position: relative;
   display: inline-grid;
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 2.5rem;
+  height: 2.5rem;
   flex: 0 0 auto;
   place-items: center;
+  border: 0;
+  background: transparent;
+  color: #ffffff;
+  padding: 0;
+}
+
+.ui-checkbox::before {
+  grid-area: 1 / 1;
+  width: 1.25rem;
+  height: 1.25rem;
+  content: "";
   border: 1px solid var(--admin-border);
   border-radius: var(--admin-radius-control);
   background: var(--admin-surface);
-  color: #ffffff;
 }
 
-.ui-checkbox[data-state="checked"] {
+.ui-checkbox[data-state="checked"]::before {
   border-color: var(--admin-accent);
   background: var(--admin-accent);
 }
 
 .ui-checkbox-indicator {
   display: grid;
+  grid-area: 1 / 1;
+  z-index: 1;
   place-items: center;
 }
 
 .ui-switch {
-  display: inline-flex;
+  position: relative;
+  display: inline-grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.ui-switch::before {
+  grid-area: 1 / 1;
   width: 2.5rem;
   height: 1.5rem;
-  align-items: center;
+  content: "";
   border: 1px solid var(--admin-border);
   border-radius: 999px;
   background: var(--admin-border);
-  padding: 0.125rem;
 }
 
-.ui-switch[data-state="checked"] {
+.ui-switch[data-state="checked"]::before {
   border-color: var(--admin-accent);
   background: var(--admin-accent);
 }
 
 .ui-switch-thumb {
   display: block;
+  grid-area: 1 / 1;
+  z-index: 1;
   width: 1.125rem;
   height: 1.125rem;
-  transform: translateX(0);
+  transform: translateX(-0.5625rem);
   border-radius: 50%;
   background: #ffffff;
   transition: transform 150ms ease;
 }
 
 .ui-switch-thumb[data-state="checked"] {
-  transform: translateX(1rem);
+  transform: translateX(0.5625rem);
 }
 
 .ui-multi-select-chips {
   display: flex;
   min-width: 0;
+  max-width: 100%;
   flex: 1;
   flex-wrap: wrap;
   gap: 0.25rem;
@@ -227,14 +254,27 @@
 
 .ui-multi-select-chip {
   display: inline-flex;
+  min-width: 0;
   max-width: 100%;
   align-items: center;
   gap: 0.25rem;
+  overflow: hidden;
+  overflow-wrap: anywhere;
   border-radius: var(--admin-radius-control);
   background: var(--admin-surface-muted);
   padding: 0.125rem 0.375rem;
   color: var(--admin-text);
   font-size: 0.75rem;
+  white-space: normal;
+}
+
+.ui-multi-select-chip svg {
+  flex: 0 0 auto;
+}
+
+.ui-checkbox:focus-visible::before,
+.ui-switch:focus-visible::before {
+  border-color: var(--admin-accent);
 }
 
 .ui-multi-select-placeholder {
@@ -469,10 +509,7 @@
 
   .ui-switch {
     width: 2.75rem;
+    height: 2.75rem;
     min-height: 2.75rem;
-  }
-
-  .ui-switch-thumb[data-state="checked"] {
-    transform: translateX(1rem);
   }
 }

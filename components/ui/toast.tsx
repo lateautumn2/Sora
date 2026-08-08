@@ -2,7 +2,7 @@
 
 import * as ToastPrimitive from "@radix-ui/react-toast";
 import { X } from "lucide-react";
-import { createContext, type ReactNode, useContext, useMemo, useState } from "react";
+import { createContext, type ReactNode, useContext, useMemo, useRef, useState } from "react";
 
 import { IconButton } from "./button";
 
@@ -64,10 +64,12 @@ export function Toast({
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastRecord[]>([]);
+  const nextToastId = useRef(0);
   const context = useMemo<ToastContextValue>(
     () => ({
       toast(options) {
-        setToasts((currentToasts) => [...currentToasts, { ...options, id: Date.now() }]);
+        nextToastId.current += 1;
+        setToasts((currentToasts) => [...currentToasts, { ...options, id: nextToastId.current }]);
       },
     }),
     [],

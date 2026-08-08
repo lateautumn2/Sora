@@ -95,14 +95,23 @@ export function MultiSelect({
                     className="ui-command-item"
                     disabled={option.disabled}
                     key={option.value}
-                    onSelect={() => toggleValue(option.value)}
+                    onSelect={() => {
+                      if (!option.disabled) {
+                        toggleValue(option.value);
+                      }
+                    }}
                     value={`${option.label} ${option.value}`}
                   >
                     <Checkbox
                       aria-label={option.label}
                       checked={checked}
+                      disabled={option.disabled}
                       onClick={(event) => event.stopPropagation()}
-                      onCheckedChange={() => toggleValue(option.value)}
+                      onCheckedChange={() => {
+                        if (!option.disabled) {
+                          toggleValue(option.value);
+                        }
+                      }}
                       tabIndex={-1}
                     />
                     <span>{option.label}</span>

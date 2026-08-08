@@ -1,10 +1,29 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, test, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Dialog } from "@/components/ui/dialog";
+import { ToastProvider, useToast } from "@/components/ui/toast";
+
+afterEach(cleanup);
+
+function ToastActions() {
+  const { toast } = useToast();
+
+  return (
+    <button
+      onClick={() => {
+        toast({ title: "First notification" });
+        toast({ title: "Second notification" });
+      }}
+      type="button"
+    >
+      Show notifications
+    </button>
+  );
+}
 
 describe("admin overlays", () => {
   test("confirm dialog only submits after explicit confirmation", () => {
@@ -36,6 +55,26 @@ describe("admin overlays", () => {
       expect(trigger).toHaveFocus();
     } finally {
       vi.useRealTimers();
+    }
+  });
+
+  test("closing one of two simultaneous toasts preserves the other", () => {
+    const now = vi.spyOn(Date, "now").mockReturnValue(1);
+
+    try {
+      render(
+        <ToastProvider>
+          <ToastActions />
+        </ToastProvider>,
+      );
+
+      fireEvent.click(screen.getByRole("button", { name: "Show notifications" }));
+      fireEvent.click(screen.getAllByRole("button", { name: "关闭通知" })[0]!);
+
+      expect(screen.queryByText("First notification")).not.toBeInTheDocument();
+      expect(screen.getByText("Second notification")).toBeInTheDocument();
+    } finally {
+      now.mockRestore();
     }
   });
 });
