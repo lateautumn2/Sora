@@ -20,6 +20,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="zh-CN">
       <head>
         <link crossOrigin="anonymous" href="https://fontsapi.zeoseven.com" rel="preconnect" />
+        {/* eslint-disable-next-line @next/next/no-css-tags -- Preserve the upstream subset manifest. */}
         <link href="/fonts/HarmonyOS_Sans_SC/main.css" rel="stylesheet" />
         <FontStylesheets />
       </head>
