@@ -1,7 +1,7 @@
 "use client";
 
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import type { ReactElement, ReactNode } from "react";
+import { cloneElement, type ReactElement, type ReactNode, type Ref, type RefObject } from "react";
 import { useRef, useState } from "react";
 
 import { Button } from "./button";
@@ -19,6 +19,25 @@ export interface ConfirmDialogProps {
   cancelLabel?: string;
 }
 
+type TriggerElementProps = { ref?: Ref<HTMLButtonElement> };
+
+function bindTriggerRef(
+  trigger: ReactElement<TriggerElementProps>,
+  triggerRef: RefObject<HTMLButtonElement | null>,
+) {
+  const childRef = trigger.props.ref;
+  return cloneElement(trigger, {
+    ref: (node: HTMLButtonElement | null) => {
+      triggerRef.current = node;
+      if (typeof childRef === "function") {
+        childRef(node);
+      } else if (childRef) {
+        (childRef as { current: HTMLButtonElement | null }).current = node;
+      }
+    },
+  });
+}
+
 export function ConfirmDialog({
   cancelLabel = "取消",
   confirmLabel = "确认删除",
@@ -32,6 +51,14 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const triggerElement = triggerAsChild ? (
+    bindTriggerRef(trigger as ReactElement<TriggerElementProps>, triggerRef)
+  ) : (
+    <Button ref={triggerRef} type="button">
+      {trigger ?? triggerLabel}
+    </Button>
+  );
+  const dialogTrigger = <DialogPrimitive.Trigger asChild>{triggerElement}</DialogPrimitive.Trigger>;
 
   function confirm() {
     onConfirm();
@@ -40,29 +67,7 @@ export function ConfirmDialog({
 
   return (
     <DialogPrimitive.Root onOpenChange={setOpen} open={open}>
-      {triggerTooltip ? (
-        <Tooltip content={triggerTooltip}>
-          <DialogPrimitive.Trigger asChild>
-            {triggerAsChild ? (
-              (trigger as ReactElement)
-            ) : (
-              <Button ref={triggerRef} type="button">
-                {trigger ?? triggerLabel}
-              </Button>
-            )}
-          </DialogPrimitive.Trigger>
-        </Tooltip>
-      ) : (
-        <DialogPrimitive.Trigger asChild>
-          {triggerAsChild ? (
-            (trigger as ReactElement)
-          ) : (
-            <Button ref={triggerRef} type="button">
-              {trigger ?? triggerLabel}
-            </Button>
-          )}
-        </DialogPrimitive.Trigger>
-      )}
+      {triggerTooltip ? <Tooltip content={triggerTooltip}>{dialogTrigger}</Tooltip> : dialogTrigger}
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="ui-dialog-overlay" />
         <DialogPrimitive.Content

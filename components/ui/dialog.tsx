@@ -2,7 +2,14 @@
 
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
-import { type ReactElement, type ReactNode, useRef } from "react";
+import {
+  cloneElement,
+  type ReactElement,
+  type ReactNode,
+  type Ref,
+  type RefObject,
+  useRef,
+} from "react";
 
 import { Button, IconButton } from "./button";
 import { Tooltip } from "./tooltip";
@@ -18,6 +25,25 @@ export interface DialogProps {
   onOpenChange?: (open: boolean) => void;
 }
 
+type TriggerElementProps = { ref?: Ref<HTMLButtonElement> };
+
+function bindTriggerRef(
+  trigger: ReactElement<TriggerElementProps>,
+  triggerRef: RefObject<HTMLButtonElement | null>,
+) {
+  const childRef = trigger.props.ref;
+  return cloneElement(trigger, {
+    ref: (node: HTMLButtonElement | null) => {
+      triggerRef.current = node;
+      if (typeof childRef === "function") {
+        childRef(node);
+      } else if (childRef) {
+        (childRef as { current: HTMLButtonElement | null }).current = node;
+      }
+    },
+  });
+}
+
 export function Dialog({
   children,
   description,
@@ -29,32 +55,18 @@ export function Dialog({
   triggerTooltip,
 }: DialogProps) {
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const triggerElement = triggerAsChild ? (
+    bindTriggerRef(trigger as ReactElement<TriggerElementProps>, triggerRef)
+  ) : (
+    <Button ref={triggerRef} type="button">
+      {trigger}
+    </Button>
+  );
+  const dialogTrigger = <DialogPrimitive.Trigger asChild>{triggerElement}</DialogPrimitive.Trigger>;
 
   return (
     <DialogPrimitive.Root onOpenChange={onOpenChange} open={open}>
-      {triggerTooltip ? (
-        <Tooltip content={triggerTooltip}>
-          <DialogPrimitive.Trigger asChild>
-            {triggerAsChild ? (
-              (trigger as ReactElement)
-            ) : (
-              <Button ref={triggerRef} type="button">
-                {trigger}
-              </Button>
-            )}
-          </DialogPrimitive.Trigger>
-        </Tooltip>
-      ) : (
-        <DialogPrimitive.Trigger asChild>
-          {triggerAsChild ? (
-            (trigger as ReactElement)
-          ) : (
-            <Button ref={triggerRef} type="button">
-              {trigger}
-            </Button>
-          )}
-        </DialogPrimitive.Trigger>
-      )}
+      {triggerTooltip ? <Tooltip content={triggerTooltip}>{dialogTrigger}</Tooltip> : dialogTrigger}
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="ui-dialog-overlay" />
         <DialogPrimitive.Content

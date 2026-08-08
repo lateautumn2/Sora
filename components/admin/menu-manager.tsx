@@ -60,13 +60,26 @@ function MenuDialog({
   triggerTooltip?: string;
 }) {
   const [state, formAction] = useActionState(saveMenuItemAction, initialState);
-  const [enabled, setEnabled] = useState(item?.enabled ?? true);
-  const [openInNewTab, setOpenInNewTab] = useState(item?.openInNewTab ?? false);
+  const initialEnabled = item?.enabled ?? true;
+  const initialOpenInNewTab = item?.openInNewTab ?? false;
+  const [enabled, setEnabled] = useState(initialEnabled);
+  const [open, setOpen] = useState(false);
+  const [openInNewTab, setOpenInNewTab] = useState(initialOpenInNewTab);
   const title = item ? "编辑菜单" : "新建菜单";
+
+  function handleOpenChange(nextOpen: boolean) {
+    setOpen(nextOpen);
+    if (!nextOpen) {
+      setEnabled(initialEnabled);
+      setOpenInNewTab(initialOpenInNewTab);
+    }
+  }
 
   return (
     <Dialog
       description="菜单 URL 仅支持站内 / 路径或 HTTPS 链接。"
+      onOpenChange={handleOpenChange}
+      open={open}
       title={title}
       trigger={trigger}
       triggerAsChild={triggerAsChild}

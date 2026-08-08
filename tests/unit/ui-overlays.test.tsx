@@ -4,6 +4,7 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { IconButton } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { ToastProvider, useToast } from "@/components/ui/toast";
 
@@ -81,6 +82,62 @@ describe("admin overlays", () => {
       fireEvent.keyDown(screen.getByRole("dialog", { name: "编辑分类" }), { key: "Escape" });
       vi.runAllTimers();
 
+      expect(trigger).toHaveFocus();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("asChild icon dialog triggers regain focus after close and Escape", () => {
+    vi.useFakeTimers();
+
+    try {
+      render(
+        <Dialog
+          title="编辑分类"
+          trigger={<IconButton aria-label="编辑记录">E</IconButton>}
+          triggerAsChild
+        >
+          内容
+        </Dialog>,
+      );
+
+      const trigger = screen.getByRole("button", { name: "编辑记录" });
+      fireEvent.click(trigger);
+      fireEvent.click(screen.getByRole("button", { name: "关闭" }));
+      vi.runAllTimers();
+      expect(trigger).toHaveFocus();
+
+      fireEvent.click(trigger);
+      fireEvent.keyDown(screen.getByRole("dialog", { name: "编辑分类" }), { key: "Escape" });
+      vi.runAllTimers();
+      expect(trigger).toHaveFocus();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("asChild icon confirm trigger regains focus after confirmation", () => {
+    vi.useFakeTimers();
+
+    try {
+      const onConfirm = vi.fn();
+      render(
+        <ConfirmDialog
+          description="此操作无法撤销"
+          onConfirm={onConfirm}
+          title="删除记录"
+          trigger={<IconButton aria-label="删除记录">D</IconButton>}
+          triggerAsChild
+        />,
+      );
+
+      const trigger = screen.getByRole("button", { name: "删除记录" });
+      fireEvent.click(trigger);
+      fireEvent.click(screen.getByRole("button", { name: "确认删除" }));
+      vi.runAllTimers();
+
+      expect(onConfirm).toHaveBeenCalledOnce();
       expect(trigger).toHaveFocus();
     } finally {
       vi.useRealTimers();

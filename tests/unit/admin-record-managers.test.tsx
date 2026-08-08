@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, test, vi } from "vitest";
 
 import { FriendManager } from "@/components/admin/friend-manager";
@@ -86,5 +86,50 @@ describe("admin record managers", () => {
     fireEvent.click(screen.getByRole("button", { name: "关闭" }));
     fireEvent.click(screen.getByRole("button", { name: "编辑 关于" }));
     expect(screen.getByRole("switch", { name: "启用 关于" })).toBeChecked();
+  });
+
+  test("friend dialogs reset unsubmitted create and edit values after reopening", () => {
+    render(
+      <FriendManager
+        friends={[
+          {
+            description: "",
+            enabled: true,
+            id: "00000000-0000-4000-8000-000000000001",
+            logoUrl: "",
+            name: "Friend 1",
+            sortOrder: 0,
+            url: "https://friend.example.com",
+          },
+        ]}
+        page={1}
+        totalPages={1}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "新建友链" }));
+    fireEvent.change(within(screen.getByRole("dialog")).getByRole("textbox", { name: "名称" }), {
+      target: { value: "未提交的新友链" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "关闭" }));
+    fireEvent.click(screen.getByRole("button", { name: "新建友链" }));
+    expect(within(screen.getByRole("dialog")).getByRole("textbox", { name: "名称" })).toHaveValue(
+      "",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "关闭" }));
+    fireEvent.click(screen.getByRole("button", { name: "编辑 Friend 1" }));
+    const editDialog = screen.getByRole("dialog");
+    fireEvent.change(within(editDialog).getByRole("textbox", { name: "名称" }), {
+      target: { value: "未提交的编辑" },
+    });
+    fireEvent.click(within(editDialog).getByRole("switch", { name: "启用 Friend 1" }));
+    fireEvent.click(screen.getByRole("button", { name: "关闭" }));
+    fireEvent.click(screen.getByRole("button", { name: "编辑 Friend 1" }));
+
+    expect(within(screen.getByRole("dialog")).getByRole("textbox", { name: "名称" })).toHaveValue(
+      "Friend 1",
+    );
+    expect(screen.getByRole("switch", { name: "启用 Friend 1" })).toBeChecked();
   });
 });

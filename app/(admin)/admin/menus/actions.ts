@@ -14,7 +14,10 @@ const menuItemSchema = z.object({
   url: z
     .string()
     .trim()
-    .refine((value) => value.startsWith("/") || /^https:\/\//.test(value), "URL 格式不正确"),
+    .refine(
+      (value) => (value.startsWith("/") && !value.startsWith("//")) || /^https:\/\//.test(value),
+      "URL 格式不正确",
+    ),
   sortOrder: z.coerce.number().int().min(0).max(999),
   openInNewTab: z.boolean(),
   enabled: z.boolean(),

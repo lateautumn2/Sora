@@ -75,12 +75,21 @@ function FriendDialog({
   triggerTooltip?: string;
 }) {
   const [state, formAction] = useActionState(saveFriendLinkAction, initialState);
-  const [enabled, setEnabled] = useState(item?.enabled ?? true);
+  const initialEnabled = item?.enabled ?? true;
+  const [enabled, setEnabled] = useState(initialEnabled);
+  const [open, setOpen] = useState(false);
   const title = item ? "编辑友链" : "新建友链";
+
+  function handleOpenChange(nextOpen: boolean) {
+    setOpen(nextOpen);
+    if (!nextOpen) setEnabled(initialEnabled);
+  }
 
   return (
     <Dialog
       description="Logo 仅支持 HTTPS 地址或 /media/ 路径。"
+      onOpenChange={handleOpenChange}
+      open={open}
       title={title}
       trigger={trigger}
       triggerAsChild={triggerAsChild}
