@@ -11,7 +11,7 @@ export function SiteFooter() {
         {settings.footerText ? <p className="sora-footer-note">{settings.footerText}</p> : null}
         <p>
           Powered by{" "}
-          <a href="https://github.com/Liksium/halo-theme-sora" rel="noreferrer" target="_blank">
+          <a href="https://github.com/lateautumn2/Sora" rel="noreferrer" target="_blank">
             Sora
           </a>
         </p>

@@ -1,12 +1,24 @@
 import Link from "next/link";
 
 import { formatSoraDate } from "@/components/site/site-format";
-import { listPublishedPosts } from "@/lib/content/service";
+import { PostPagination } from "@/components/site/post-pagination";
+import { countPublishedPosts, listPublishedPosts } from "@/lib/content/service";
+import {
+  resolvePage,
+  resolveTotalPages,
+  SITE_PAGE_SIZE,
+} from "@/lib/content/pagination";
 
 export const metadata = { title: "归档" };
 
-export default function ArchivesPage() {
-  const posts = listPublishedPosts(10_000);
+export default async function ArchivesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const page = resolvePage((await searchParams).page);
+  const posts = listPublishedPosts(SITE_PAGE_SIZE, (page - 1) * SITE_PAGE_SIZE);
+  const totalPages = resolveTotalPages(countPublishedPosts());
   const years = Map.groupBy(posts, (post) =>
     post.publishedAt ? new Date(post.publishedAt).getFullYear() : 0,
   );
@@ -36,6 +48,7 @@ export default function ArchivesPage() {
           </section>
         ))
       )}
+      <PostPagination basePath="/archives" page={page} totalPages={totalPages} />
     </div>
   );
 }

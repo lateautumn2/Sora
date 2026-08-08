@@ -18,7 +18,7 @@
     ]
   },
   "scripts": {
-    "dev": "next dev",
+    "dev": "node scripts/migrate.mjs && next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
@@ -42,10 +42,11 @@
     "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test"
   },
   "dependencies": {
-    "@codemirror/lang-markdown": "6.5.2",
-    "@uiw/react-codemirror": "4.25.11",
+    "@bytemd/plugin-gfm": "1.22.0",
+    "@bytemd/react": "1.22.0",
     "better-auth": "1.6.26",
     "better-sqlite3": "12.11.1",
+    "bytemd": "1.22.0",
     "drizzle-orm": "0.45.2",
     "highlight.js": "11.11.1",
     "lucide-react": "1.29.0",

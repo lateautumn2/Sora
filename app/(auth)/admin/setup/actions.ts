@@ -6,8 +6,6 @@ import { z } from "zod";
 
 import { isAdminInitialized } from "@/lib/auth/admin";
 import { auth } from "@/lib/auth/server";
-import { isValidSetupToken } from "@/lib/auth/setup-token";
-import { getEnvironment } from "@/lib/env";
 
 const setupSchema = z
   .object({
@@ -15,7 +13,6 @@ const setupSchema = z
     email: z.string().trim().email("请输入有效邮箱地址"),
     password: z.string().min(12, "密码至少需要 12 个字符").max(128, "密码不能超过 128 个字符"),
     confirmPassword: z.string(),
-    setupToken: z.string().min(1, "请输入初始化令牌"),
   })
   .refine((value) => value.password === value.confirmPassword, {
     message: "两次输入的密码不一致",
@@ -24,9 +21,7 @@ const setupSchema = z
 
 export interface SetupActionState {
   error?: string;
-  fields?: Partial<
-    Record<"name" | "email" | "password" | "confirmPassword" | "setupToken", string>
-  >;
+  fields?: Partial<Record<"name" | "email" | "password" | "confirmPassword", string>>;
 }
 
 export async function setupAdminAction(
@@ -42,7 +37,6 @@ export async function setupAdminAction(
     email: formData.get("email"),
     password: formData.get("password"),
     confirmPassword: formData.get("confirmPassword"),
-    setupToken: formData.get("setupToken"),
   });
 
   if (!result.success) {
@@ -53,13 +47,8 @@ export async function setupAdminAction(
         email: fields.email?.[0],
         password: fields.password?.[0],
         confirmPassword: fields.confirmPassword?.[0],
-        setupToken: fields.setupToken?.[0],
       },
     };
-  }
-
-  if (!isValidSetupToken(result.data.setupToken, getEnvironment().setupToken)) {
-    return { error: "初始化令牌无效" };
   }
 
   try {

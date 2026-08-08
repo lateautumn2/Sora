@@ -13,6 +13,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/categories",
     "/tags",
     "/search",
+    "/friends",
     "/about",
   ].map((path) => ({ url: `${origin}${path}`, changeFrequency: "weekly" }));
   const postEntries = listPublishedPosts(50_000).map((post) => ({

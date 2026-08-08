@@ -1,19 +1,27 @@
 import { TaxonomyManager } from "@/components/admin/taxonomy-manager";
-import { listCategories } from "@/lib/content/service";
+import { resolvePage, resolveTotalPages } from "@/lib/content/pagination";
+import { countTaxonomies, listCategories } from "@/lib/content/service";
 
 import { deleteCategoryAction, saveCategoryAction } from "../taxonomy-actions";
 
 export default async function AdminCategoriesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ notice?: string }>;
+  searchParams: Promise<{ notice?: string; page?: string }>;
 }) {
+  const query = await searchParams;
+  const page = resolvePage(query.page);
+  const pageSize = 10;
+  const total = countTaxonomies("category");
   return (
     <TaxonomyManager
       deleteAction={deleteCategoryAction}
-      items={listCategories(true)}
-      notice={(await searchParams).notice}
+      items={listCategories(true, pageSize, (page - 1) * pageSize)}
+      notice={query.notice}
       noun="分类"
+      page={page}
+      totalPages={resolveTotalPages(total, pageSize)}
+      basePath="/admin/categories"
       saveAction={saveCategoryAction}
     />
   );

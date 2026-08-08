@@ -12,6 +12,7 @@ const fallbackNavigation: SiteNavigationItem[] = [
   { href: "/archives", id: "archives", label: "归档", openInNewTab: false },
   { href: "/categories", id: "categories", label: "分类", openInNewTab: false },
   { href: "/tags", id: "tags", label: "标签", openInNewTab: false },
+  { href: "/friends", id: "friends", label: "友链", openInNewTab: false },
   { href: "/about", id: "about", label: "关于", openInNewTab: false },
 ];
 

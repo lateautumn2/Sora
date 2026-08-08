@@ -20,10 +20,7 @@ export default async function AdminMenusPage({
         </p>
       </header>
       {notice ? (
-        <p
-          className="mt-5 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] p-3 text-sm"
-          role="status"
-        >
+        <p className="admin-notice mt-5" role="status">
           {notice === "invalid"
             ? "菜单名称或 URL 格式不正确"
             : notice === "deleted"
@@ -31,7 +28,7 @@ export default async function AdminMenusPage({
               : "菜单项已保存"}
         </p>
       ) : null}
-      <section className="mt-6">
+      <section className="admin-panel mt-6">
         <h2 className="text-lg font-semibold">新建菜单项</h2>
         <form
           action={saveMenuItemAction}
@@ -73,7 +70,7 @@ export default async function AdminMenusPage({
           </button>
         </form>
       </section>
-      <section className="mt-10">
+      <section className="admin-panel mt-6">
         <h2 className="border-b border-[var(--border)] pb-3 text-lg font-semibold">主导航</h2>
         {items.length === 0 ? (
           <p className="py-12 text-center text-sm text-[var(--muted)]">未配置时将使用默认导航</p>

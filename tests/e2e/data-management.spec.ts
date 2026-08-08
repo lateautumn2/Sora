@@ -12,7 +12,6 @@ test("admin imports a content package and validates a full backup", async ({ pag
     await page.getByLabel("邮箱").fill("data-acceptance@example.com");
     await page.getByLabel("密码", { exact: true }).fill("data-acceptance-password-2026");
     await page.getByLabel("确认密码").fill("data-acceptance-password-2026");
-    await page.getByLabel("初始化令牌").fill(process.env.SETUP_TOKEN ?? "");
     await page.getByRole("button", { name: "创建管理员" }).click();
   } else {
     await page.goto("/admin/login");

@@ -8,8 +8,10 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
   getPublishedContentBySlug,
+  getSiteSettings,
   listCategories,
   saveContent,
+  saveSiteSettings,
   saveTaxonomy,
   searchPublishedPosts,
 } from "@/lib/content/service";
@@ -85,6 +87,49 @@ describe("content service", () => {
       .sqlite.prepare("SELECT COUNT(*) AS count FROM post_revisions WHERE post_id = ?")
       .get(postId) as { count: number };
     expect(revision.count).toBe(1);
+  });
+
+  it("applies global comment settings to new submissions", () => {
+    const postId = saveContent({
+      kind: "POST",
+      title: "全局评论设置",
+      slug: "global-comment-settings",
+      sourceContent: "正文",
+      sourceFormat: "MARKDOWN",
+      status: "PUBLISHED",
+      visibility: "PUBLIC",
+      allowComment: true,
+      pinned: false,
+      categoryIds: [],
+      tagIds: [],
+    });
+    const baseInput = {
+      authorName: "访客",
+      authorEmail: "reader@example.com",
+      authorWebsite: "",
+      content: "一条评论",
+      parentId: null,
+      company: "",
+    };
+
+    saveSiteSettings({ ...getSiteSettings(), requireCommentModeration: false });
+    const published = createPublicComment(
+      postId,
+      { ...baseInput, requestToken: randomUUID() },
+      "visitor-settings",
+      "test-agent",
+    );
+    expect(published.status).toBe("APPROVED");
+
+    saveSiteSettings({ ...getSiteSettings(), allowComments: false });
+    expect(() =>
+      createPublicComment(
+        postId,
+        { ...baseInput, requestToken: randomUUID(), content: "关闭后的评论" },
+        "visitor-settings-closed",
+        "test-agent",
+      ),
+    ).toThrowError(new InteractionError("COMMENTS_CLOSED"));
   });
 
   it("persists idempotent comments, moderation counts, views, upvotes, and rate limits", () => {

@@ -3,6 +3,7 @@
 import { Eye, Heart, MessageSquare, Reply } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
+import { CommentAvatar } from "@/components/comment-avatar";
 import type { PublicComment } from "@/lib/comments/service";
 
 interface PostInteractionsProps {
@@ -14,9 +15,12 @@ interface PostInteractionsProps {
 }
 
 interface InteractionResponse {
-  data?: { upvoteCount: number; viewCount?: number; upvoted: boolean };
+  data?: { upvoteCount: number; viewCount?: number; upvoted: boolean; status?: "PENDING" | "APPROVED" };
   error?: { message?: string };
 }
+
+/** 评论列表初始展示的顶层评论数量，点击"加载更多"后按批追加。 */
+const COMMENTS_PAGE_SIZE = 10;
 
 export function PostInteractions({
   allowComment,
@@ -116,64 +120,101 @@ export function PostInteractions({
 
       <h2 className="sora-comments-title" id="post-comments">
         评论
+        <span className="sora-comments-count">{comments.length}</span>
       </h2>
       <CommentList comments={comments} onReply={setReplyTo} />
 
       {allowComment ? (
-        <form className="sora-comment-form" onSubmit={handleComment}>
-          <div className="flex items-center justify-between gap-3">
-            <h3 className="font-medium">{replyTo ? `回复 ${replyTo.authorName}` : "发表评论"}</h3>
-            {replyTo ? (
-              <button
-                className="text-sm text-[var(--muted)] hover:text-[var(--primary)]"
-                onClick={() => setReplyTo(null)}
-                type="button"
-              >
-                取消回复
-              </button>
-            ) : null}
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="grid gap-2 text-sm">
-              昵称
-              <input className="form-input" maxLength={60} name="authorName" required />
-            </label>
-            <label className="grid gap-2 text-sm">
-              邮箱
-              <input
-                className="form-input"
-                maxLength={254}
-                name="authorEmail"
-                required
-                type="email"
-              />
-            </label>
-          </div>
-          <label className="grid gap-2 text-sm">
-            个人网站
-            <input className="form-input" name="authorWebsite" placeholder="https://" type="url" />
-          </label>
-          <label className="absolute -left-[10000px] top-auto size-px overflow-hidden">
-            公司
-            <input autoComplete="off" name="company" tabIndex={-1} />
-          </label>
-          <label className="grid gap-2 text-sm">
-            评论
-            <textarea className="form-textarea min-h-32" maxLength={5000} name="content" required />
-          </label>
-          {message ? (
-            <p className="text-sm text-[var(--muted)]" role="status">
-              {message}
-            </p>
-          ) : null}
-          <button className="primary-button w-fit" disabled={pending} type="submit">
-            {pending ? "正在提交..." : "提交评论"}
-          </button>
-        </form>
+        <CommentForm
+          message={message}
+          onSubmit={handleComment}
+          pending={pending}
+          replyTo={replyTo}
+          setReplyTo={setReplyTo}
+        />
       ) : (
         <p className="mt-8 text-sm text-[var(--muted)]">这篇文章已关闭评论。</p>
       )}
     </section>
+  );
+}
+
+function CommentForm({
+  message,
+  onSubmit,
+  pending,
+  replyTo,
+  setReplyTo,
+}: {
+  message: string;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  pending: boolean;
+  replyTo: PublicComment | null;
+  setReplyTo: (comment: PublicComment | null) => void;
+}) {
+  return (
+    <form className="sora-comment-form" onSubmit={onSubmit}>
+      <div className="sora-comment-form-head">
+        <h3>{replyTo ? `回复 ${replyTo.authorName}` : "发表评论"}</h3>
+        {replyTo ? (
+          <button
+            className="text-sm text-[var(--muted)] hover:text-[var(--primary)]"
+            onClick={() => setReplyTo(null)}
+            type="button"
+          >
+            取消回复
+          </button>
+        ) : null}
+      </div>
+      <textarea
+        aria-label="评论内容"
+        className="sora-comment-textarea"
+        maxLength={5000}
+        name="content"
+        placeholder="友善评论，理性发言…"
+        required
+      />
+      <div className="sora-comment-fields">
+        <input
+          aria-label="昵称"
+          className="form-input"
+          maxLength={60}
+          name="authorName"
+          placeholder="昵称 *"
+          required
+        />
+        <input
+          aria-label="邮箱"
+          className="form-input"
+          maxLength={254}
+          name="authorEmail"
+          placeholder="邮箱 *（不会公开）"
+          required
+          type="email"
+        />
+        <input
+          aria-label="个人网站"
+          className="form-input"
+          name="authorWebsite"
+          placeholder="个人网站（可选）"
+          type="url"
+        />
+      </div>
+      <label className="absolute -left-[10000px] top-auto size-px overflow-hidden">
+        公司
+        <input autoComplete="off" name="company" tabIndex={-1} />
+      </label>
+      <div className="sora-comment-form-foot">
+        {message ? (
+          <p className="text-sm text-[var(--muted)]" role="status">
+            {message}
+          </p>
+        ) : null}
+        <button className="primary-button justify-center" disabled={pending} type="submit">
+          {pending ? "正在提交…" : "提交评论"}
+        </button>
+      </div>
+    </form>
   );
 }
 
@@ -194,47 +235,71 @@ function CommentList({
     return map;
   }, [comments]);
 
-  if (comments.length === 0)
-    return <p className="mt-5 text-sm text-[var(--muted)]">还没有公开评论。</p>;
+  const topLevel = children.get(null) ?? [];
+  const [visibleCount, setVisibleCount] = useState(COMMENTS_PAGE_SIZE);
+  const visibleTop = topLevel.slice(0, visibleCount);
 
-  const renderBranch = (parentId: string | null, depth: number): React.ReactNode =>
-    (children.get(parentId) ?? []).map((comment) => (
-      <article
-        className={`${depth > 0 ? "ml-5 border-l border-[var(--border)] pl-4" : ""} py-4`}
-        key={comment.id}
-      >
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          {comment.authorWebsite ? (
-            <a
-              className="font-medium hover:text-[var(--primary)]"
-              href={comment.authorWebsite}
-              rel="nofollow noreferrer"
-              target="_blank"
-            >
-              {comment.authorName}
-            </a>
-          ) : (
-            <span className="font-medium">{comment.authorName}</span>
-          )}
-          <time className="text-xs text-[var(--muted)]">
-            {new Date(comment.createdAt).toLocaleString("zh-CN")}
-          </time>
+  if (comments.length === 0) {
+    return <p className="sora-comments-empty">还没有公开评论。</p>;
+  }
+
+  const renderBranch = (
+    parentId: string | null,
+    depth: number,
+    visibleList?: PublicComment[],
+  ): React.ReactNode =>
+    (visibleList ?? children.get(parentId) ?? []).map((comment) => (
+      <article className="sora-comment-item" key={comment.id}>
+        <CommentAvatar name={comment.authorName} size={36} />
+        <div className="sora-comment-body">
+          <div className="sora-comment-meta">
+            {comment.authorWebsite ? (
+              <a
+                className="sora-comment-author"
+                href={comment.authorWebsite}
+                rel="nofollow noreferrer"
+                target="_blank"
+              >
+                {comment.authorName}
+              </a>
+            ) : (
+              <span className="sora-comment-author">{comment.authorName}</span>
+            )}
+            <time className="sora-comment-time">
+              {new Date(comment.createdAt).toLocaleString("zh-CN")}
+            </time>
+          </div>
+          <div
+            className="prose-content sora-comment-content"
+            dangerouslySetInnerHTML={{ __html: comment.renderedHtml }}
+          />
+          <button
+            className="sora-comment-reply"
+            onClick={() => onReply(comment)}
+            type="button"
+          >
+            <Reply aria-hidden="true" size={13} />
+            回复
+          </button>
+          {depth < 3 ? (
+            <div className="sora-comment-children">{renderBranch(comment.id, depth + 1)}</div>
+          ) : null}
         </div>
-        <div
-          className="prose-content mt-2 text-base"
-          dangerouslySetInnerHTML={{ __html: comment.renderedHtml }}
-        />
-        <button
-          className="mt-2 inline-flex items-center gap-1 text-xs text-[var(--muted)] hover:text-[var(--primary)]"
-          onClick={() => onReply(comment)}
-          type="button"
-        >
-          <Reply aria-hidden="true" size={13} />
-          回复
-        </button>
-        {depth < 3 ? renderBranch(comment.id, depth + 1) : null}
       </article>
     ));
 
-  return <div className="mt-5 divide-y divide-[var(--border)]">{renderBranch(null, 0)}</div>;
+  return (
+    <div className="sora-comment-list">
+      {renderBranch(null, 0, visibleTop)}
+      {visibleTop.length < topLevel.length ? (
+        <button
+          className="sora-comments-load-more"
+          onClick={() => setVisibleCount((count) => count + COMMENTS_PAGE_SIZE)}
+          type="button"
+        >
+          加载更多评论（还有 {topLevel.length - visibleTop.length} 条）
+        </button>
+      ) : null}
+    </div>
+  );
 }

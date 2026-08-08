@@ -14,6 +14,7 @@ const navigation = [
   ["/admin/comments", "评论"],
   ["/admin/media", "媒体"],
   ["/admin/menus", "菜单"],
+  ["/admin/friends", "友链"],
   ["/admin/data", "数据管理"],
   ["/admin/settings", "设置"],
 ] as const;

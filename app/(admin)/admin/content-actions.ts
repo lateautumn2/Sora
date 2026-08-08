@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { requireAdminSession } from "@/lib/auth/admin";
-import { saveContent, trashContent } from "@/lib/content/service";
+import { restoreContent, saveContent, trashContent } from "@/lib/content/service";
 import { contentInputSchema, normalizeSlug } from "@/lib/content/validation";
 
 export interface ContentActionState {
@@ -71,4 +71,15 @@ export async function trashContentAction(formData: FormData): Promise<never> {
     revalidatePath("/", "layout");
   }
   redirect(`/admin/${kind === "POST" ? "posts" : "pages"}`);
+}
+
+export async function restoreContentAction(formData: FormData): Promise<never> {
+  await requireAdminSession();
+  const id = String(formData.get("id") ?? "");
+  const kind = formData.get("kind") === "PAGE" ? "PAGE" : "POST";
+  if (id) {
+    restoreContent(id);
+    revalidatePath("/", "layout");
+  }
+  redirect(`/admin/${kind === "POST" ? "posts" : "pages"}?status=TRASHED`);
 }

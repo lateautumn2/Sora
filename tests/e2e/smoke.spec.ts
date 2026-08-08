@@ -26,6 +26,27 @@ test("renders Sora archive and taxonomy layouts", async ({ page }) => {
   await expect(page.locator(".sora-taxonomy-page")).toBeVisible();
 });
 
+test("renders the public friends page without horizontal overflow", async ({ page }, testInfo) => {
+  await page.goto("/friends");
+
+  await expect(page.getByRole("heading", { level: 1, name: "友链" })).toBeVisible();
+  if (testInfo.project.name === "mobile-chromium") {
+    await page.getByRole("button", { name: "打开导航" }).click();
+    const navigation = page.getByRole("navigation", { name: "移动端导航" });
+    await expect(navigation).toBeVisible();
+    await expect(navigation.getByRole("link", { name: "友链" })).toBeVisible();
+  } else {
+    const navigation = page.getByRole("navigation", { name: "主导航" });
+    await expect(navigation).toBeVisible();
+    await expect(navigation.getByRole("link", { name: "友链" })).toBeVisible();
+  }
+
+  const hasHorizontalOverflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+  );
+  expect(hasHorizontalOverflow).toBe(false);
+});
+
 test("redirects an anonymous administrator to setup or login", async ({ page }) => {
   await page.goto("/admin");
 

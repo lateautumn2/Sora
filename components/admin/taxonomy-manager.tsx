@@ -1,5 +1,6 @@
 import { Save, Trash2 } from "lucide-react";
 
+import { PostPagination } from "@/components/site/post-pagination";
 import type { TaxonomyItem } from "@/lib/content/service";
 
 interface TaxonomyManagerProps {
@@ -8,6 +9,9 @@ interface TaxonomyManagerProps {
   notice?: string;
   saveAction: (formData: FormData) => Promise<never>;
   deleteAction: (formData: FormData) => Promise<never>;
+  page: number;
+  totalPages: number;
+  basePath: string;
 }
 
 const notices: Record<string, string> = {
@@ -24,99 +28,131 @@ export function TaxonomyManager({
   notice,
   saveAction,
   deleteAction,
+  page,
+  totalPages,
+  basePath,
 }: TaxonomyManagerProps) {
   return (
-    <div>
-      <header className="border-b border-[var(--border)] pb-5">
-        <h1 className="text-2xl font-semibold">{noun}</h1>
-        <p className="mt-1 text-sm text-[var(--muted)]">维护名称、公开 URL 与内容关联</p>
+    <div className="admin-page">
+      <header className="admin-page-header">
+        <div>
+          <h1>{noun}</h1>
+          <p>维护名称、公开 URL 与内容关联，保持站点内容结构清晰。</p>
+        </div>
+        <span className="admin-page-badge">共 {items.length} 条当前页记录</span>
       </header>
+
       {notice && notices[notice] ? (
-        <p
-          className="mt-5 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] p-3 text-sm"
-          role="status"
-        >
+        <p className="admin-notice mt-5" role="status">
           {notices[notice]}
         </p>
       ) : null}
 
-      <section className="mt-6" aria-labelledby="new-taxonomy">
-        <h2 className="text-lg font-semibold" id="new-taxonomy">
-          新建{noun}
-        </h2>
-        <form action={saveAction} className="mt-3 grid gap-3 md:grid-cols-[1fr_1fr_2fr_auto]">
-          <input
-            aria-label={`${noun}名称`}
-            className="form-input"
-            name="name"
-            placeholder="名称"
-            required
-          />
-          <input
-            aria-label={`${noun} URL 别名`}
-            className="form-input"
-            name="slug"
-            placeholder="url-slug"
-            required
-          />
-          <input
-            aria-label={`${noun}说明`}
-            className="form-input"
-            name="description"
-            placeholder="简短说明（可选）"
-          />
-          <button className="primary-button justify-center" type="submit">
+      <section aria-labelledby="new-taxonomy" className="admin-panel mt-6">
+        <div className="admin-panel-header">
+          <div>
+            <h2 id="new-taxonomy">新建{noun}</h2>
+            <p className="mt-1 text-sm text-[var(--muted)]">填写名称、URL 别名和可选说明。</p>
+          </div>
+          <span className="admin-section-index">01</span>
+        </div>
+        <form action={saveAction} className="mt-5 grid gap-3 md:grid-cols-[1fr_1fr_1.5fr_auto]">
+          <label className="admin-field">
+            <span>名称</span>
+            <input
+              aria-label={`${noun}名称`}
+              className="form-input"
+              name="name"
+              placeholder="例如：产品设计"
+              required
+            />
+          </label>
+          <label className="admin-field">
+            <span>URL 别名</span>
+            <input
+              aria-label={`${noun} URL 别名`}
+              className="form-input font-mono text-sm"
+              name="slug"
+              placeholder="product-design"
+              required
+            />
+          </label>
+          <label className="admin-field">
+            <span>说明</span>
+            <input
+              aria-label={`${noun}说明`}
+              className="form-input"
+              name="description"
+              placeholder="简短说明（可选）"
+            />
+          </label>
+          <button className="primary-button self-end justify-center" type="submit">
             <Save aria-hidden="true" size={16} />
             保存
           </button>
         </form>
       </section>
 
-      <section className="mt-10" aria-labelledby="taxonomy-list">
-        <h2
-          className="border-b border-[var(--border)] pb-3 text-lg font-semibold"
-          id="taxonomy-list"
-        >
-          已有{noun}
-        </h2>
+      <section aria-labelledby="taxonomy-list" className="admin-panel mt-6">
+        <div className="admin-panel-header">
+          <div>
+            <h2 id="taxonomy-list">已有{noun}</h2>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              可直接修改字段，保存后立即更新内容关联。
+            </p>
+          </div>
+          <span className="admin-section-index">02</span>
+        </div>
         {items.length === 0 ? (
-          <p className="py-12 text-center text-sm text-[var(--muted)]">暂无{noun}</p>
+          <div className="admin-empty mt-5">暂无{noun}</div>
         ) : (
-          <div className="divide-y divide-[var(--border)]">
+          <div className="admin-list mt-5">
             {items.map((item) => (
-              <div className="grid gap-2 py-4 md:grid-cols-[1fr_1fr_2fr_auto_auto]" key={item.id}>
+              <div
+                className="admin-taxonomy-row md:grid-cols-[1fr_1fr_1.5fr_auto_auto]"
+                key={item.id}
+              >
                 <form action={saveAction} className="contents">
                   <input name="id" type="hidden" value={item.id} />
-                  <input
-                    aria-label={`${item.name}名称`}
-                    className="form-input"
-                    defaultValue={item.name}
-                    name="name"
-                    required
-                  />
-                  <input
-                    aria-label={`${item.name} URL 别名`}
-                    className="form-input font-mono text-sm"
-                    defaultValue={item.slug}
-                    name="slug"
-                    required
-                  />
-                  <input
-                    aria-label={`${item.name}说明`}
-                    className="form-input"
-                    defaultValue={item.description}
-                    name="description"
-                  />
+                  <label className="admin-field">
+                    <span>名称</span>
+                    <input
+                      aria-label={`${item.name}名称`}
+                      className="form-input"
+                      defaultValue={item.name}
+                      name="name"
+                      required
+                    />
+                  </label>
+                  <label className="admin-field">
+                    <span>URL 别名</span>
+                    <input
+                      aria-label={`${item.name} URL 别名`}
+                      className="form-input font-mono text-sm"
+                      defaultValue={item.slug}
+                      name="slug"
+                      required
+                    />
+                  </label>
+                  <label className="admin-field">
+                    <span>说明</span>
+                    <input
+                      aria-label={`${item.name}说明`}
+                      className="form-input"
+                      defaultValue={item.description}
+                      name="description"
+                    />
+                  </label>
                   <button
                     aria-label={`保存${item.name}`}
-                    className="icon-button"
+                    className="icon-button self-end"
                     title="保存"
                     type="submit"
                   >
                     <Save aria-hidden="true" size={16} />
                   </button>
                 </form>
-                <form action={deleteAction}>
+                <form action={deleteAction} className="self-end">
                   <input name="id" type="hidden" value={item.id} />
                   <button
                     aria-label={`删除${item.name}`}
@@ -131,6 +167,12 @@ export function TaxonomyManager({
             ))}
           </div>
         )}
+        <PostPagination
+          basePath={basePath}
+          className="admin-pagination mt-5"
+          page={page}
+          totalPages={totalPages}
+        />
       </section>
     </div>
   );

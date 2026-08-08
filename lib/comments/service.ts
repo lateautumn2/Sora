@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { renderComment } from "@/lib/content/render";
+import { getSiteSettings } from "@/lib/content/service";
 import { getDatabaseConnection } from "@/lib/db/client";
 import { hashRequestToken } from "@/lib/interactions/request";
 import type { PublicCommentInput } from "@/lib/comments/validation";
@@ -23,6 +24,15 @@ export interface AdminComment extends PublicComment {
   status: CommentStatus;
   authorEmail: string;
   content: string;
+}
+
+export interface AdminCommentPostGroup {
+  postId: string;
+  postTitle: string;
+  postSlug: string;
+  commentCount: number;
+  latestCommentAt: number;
+  comments: AdminComment[];
 }
 
 export class InteractionError extends Error {
@@ -71,7 +81,11 @@ export function createPublicComment(
       )
       .get(postId, Date.now()) as { id: string; allowComment: number } | undefined;
     if (!post) throw new InteractionError("POST_NOT_FOUND");
-    if (!post.allowComment) throw new InteractionError("COMMENTS_CLOSED");
+    const settings = getSiteSettings();
+    if (!settings.allowComments || !post.allowComment) {
+      throw new InteractionError("COMMENTS_CLOSED");
+    }
+    const status: CommentStatus = settings.requireCommentModeration ? "PENDING" : "APPROVED";
 
     const now = Date.now();
     const bucketStart = Math.floor(now / 600_000) * 600_000;
@@ -108,13 +122,14 @@ export function createPublicComment(
            id, post_id, parent_id, root_id, status, author_name, author_email,
            author_website, content, rendered_html, ip_hash, user_agent_summary,
            created_at, updated_at
-         ) VALUES (?, ?, ?, ?, 'PENDING', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         id,
         postId,
         input.parentId,
         rootId,
+        status,
         input.authorName,
         input.authorEmail,
         input.authorWebsite || null,
@@ -125,16 +140,24 @@ export function createPublicComment(
         now,
         now,
       );
+    if (status === "APPROVED") {
+      sqlite.prepare("UPDATE comments SET approved_at = ? WHERE id = ?").run(now, id);
+      sqlite.prepare("UPDATE posts SET comment_count = comment_count + 1 WHERE id = ?").run(postId);
+    }
     sqlite
       .prepare("INSERT INTO comment_requests (token_hash, comment_id, created_at) VALUES (?, ?, ?)")
       .run(tokenHash, id, now);
-    return { id, status: "PENDING" as const, duplicate: false };
+    return { id, status, duplicate: false };
   })();
 }
 
-export function listAdminComments(status?: CommentStatus): AdminComment[] {
+export function listAdminComments(
+  status: CommentStatus | undefined,
+  limit = 20,
+  offset = 0,
+): AdminComment[] {
   const where = status ? "WHERE c.status = ?" : "";
-  const params = status ? [status] : [];
+  const params = status ? [status, limit, offset] : [limit, offset];
   return getDatabaseConnection()
     .sqlite.prepare(
       `SELECT c.id, c.post_id AS postId, p.title AS postTitle, c.parent_id AS parentId,
@@ -143,9 +166,86 @@ export function listAdminComments(status?: CommentStatus): AdminComment[] {
               c.content, c.rendered_html AS renderedHtml,
               c.created_at AS createdAt
        FROM comments c JOIN posts p ON p.id = c.post_id
-       ${where} ORDER BY c.created_at DESC`,
+       ${where} ORDER BY c.created_at DESC
+       LIMIT ? OFFSET ?`,
     )
     .all(...params) as AdminComment[];
+}
+
+export function countAdminCommentPosts(status?: CommentStatus): number {
+  const where = status ? "WHERE c.status = ?" : "";
+  const row = getDatabaseConnection()
+    .sqlite.prepare(
+      `SELECT COUNT(DISTINCT c.post_id) AS total
+       FROM comments c
+       ${where}`,
+    )
+    .get(...(status ? [status] : [])) as { total: number };
+  return row.total;
+}
+
+export function listAdminCommentPosts(
+  status: CommentStatus | undefined,
+  limit = 20,
+  offset = 0,
+): AdminCommentPostGroup[] {
+  const sqlite = getDatabaseConnection().sqlite;
+  const where = status ? "WHERE c.status = ?" : "";
+  const groups = sqlite
+    .prepare(
+      `SELECT p.id AS postId, p.title AS postTitle, p.slug AS postSlug,
+              COUNT(c.id) AS commentCount, MAX(c.created_at) AS latestCommentAt
+       FROM comments c
+       JOIN posts p ON p.id = c.post_id
+       ${where}
+       GROUP BY p.id
+       ORDER BY latestCommentAt DESC
+       LIMIT ? OFFSET ?`,
+    )
+    .all(...(status ? [status, limit, offset] : [limit, offset])) as Array<
+    Omit<AdminCommentPostGroup, "comments">
+  >;
+
+  if (groups.length === 0) return [];
+
+  const placeholders = groups.map(() => "?").join(", ");
+  const commentWhere = status
+    ? `c.post_id IN (${placeholders}) AND c.status = ?`
+    : `c.post_id IN (${placeholders})`;
+  const comments = sqlite
+    .prepare(
+      `SELECT c.id, c.post_id AS postId, p.title AS postTitle, c.parent_id AS parentId,
+              c.root_id AS rootId, c.status, c.author_name AS authorName,
+              c.author_email AS authorEmail, c.author_website AS authorWebsite,
+              c.content, c.rendered_html AS renderedHtml, c.created_at AS createdAt
+       FROM comments c
+       JOIN posts p ON p.id = c.post_id
+       WHERE ${commentWhere}
+       ORDER BY c.created_at DESC`,
+    )
+    .all(...(status ? [...groups.map((group) => group.postId), status] : groups.map((group) => group.postId))) as AdminComment[];
+
+  return groups.map((group) => ({
+    ...group,
+    comments: comments.filter((comment) => comment.postId === group.postId),
+  }));
+}
+
+/** 按状态统计评论数量，供评论管理页筛选标签显示计数。 */
+export function countAdminCommentsByStatus(): Record<CommentStatus, number> {
+  const rows = getDatabaseConnection()
+    .sqlite.prepare("SELECT status, COUNT(*) AS total FROM comments GROUP BY status")
+    .all() as Array<{ status: CommentStatus; total: number }>;
+  const result: Record<CommentStatus, number> = {
+    PENDING: 0,
+    APPROVED: 0,
+    SPAM: 0,
+    TRASHED: 0,
+  };
+  for (const row of rows) {
+    result[row.status] = row.total;
+  }
+  return result;
 }
 
 export function setCommentStatus(id: string, nextStatus: CommentStatus): void {

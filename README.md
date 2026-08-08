@@ -15,13 +15,15 @@ Sora 是一个可自行部署的全栈博客系统，视觉与信息结构参考
 
 ## Docker Compose 部署
 
-服务器需要安装 Docker Engine 与 Docker Compose 插件。下载仓库中的 `compose.yaml`，按需修改其中的 `APP_URL`、`TRUSTED_ORIGINS` 与三个密钥，然后启动：
+服务器需要安装 Docker Engine 与 Docker Compose 插件。下载仓库中的 `compose.yaml` 后直接启动：
 
 ```shell
 docker compose up -d app
 ```
 
-为 `./data` 创建持久化目录。Linux bind mount 需要允许容器用户 `1001:1001` 写入该目录。数据库迁移会在容器启动时自动执行。`compose.yaml` 默认监听 `3000:3000`，建议使用 Caddy、Nginx 等反向代理提供 HTTPS。启动后访问 `/admin/setup`，输入 `compose.yaml` 中的 `SETUP_TOKEN` 创建管理员；令牌仅用于首次初始化，不是管理员登录密码。
+为 `./data` 创建持久化目录，Linux bind mount 需要允许容器用户 `1001:1001` 写入该目录。首次启动会自动建表并应用数据库迁移，无需手动执行迁移命令；`AUTH_SECRET` 与 `VISITOR_HASH_SECRET` 会首次启动时自动生成并持久化到 `data/secrets/`，之后复用。
+
+`compose.yaml` 默认监听 `3000:3000`，建议使用 Caddy、Nginx 等反向代理提供 HTTPS。启动后访问 `/admin/setup` 创建唯一的管理员账号（无需任何令牌）。站点地址与可信来源默认取 `http://localhost:3000`，可在后台 `/admin/settings` 修改，保存后立即生效，无需重启容器。
 
 升级时直接拉取镜像并重建容器：
 
@@ -33,6 +35,8 @@ docker compose up -d app
 若 GHCR 镜像尚未设为公开，需要先使用具有 `read:packages` 权限的 GitHub Token 执行 `docker login ghcr.io`。
 
 本地构建镜像：先执行 `docker build -t sora-blog:local .`，再将 `compose.yaml` 中 `image` 改为 `sora-blog:local` 后启动。
+
+环境变量优先级：`compose.yaml` 或环境中显式设置的 `APP_URL`、`TRUSTED_ORIGINS`、`AUTH_SECRET`、`VISITOR_HASH_SECRET` 优先于运行期配置；未设置时分别回退到后台配置与自动生成的密钥。因此 `compose.yaml` 刻意不写这些变量，把站点地址与来源的修改权留给后台。
 
 ## 备份与恢复
 
@@ -49,7 +53,7 @@ pnpm db:migrate:runtime
 pnpm dev
 ```
 
-Windows PowerShell 使用 `Copy-Item .env.example .env.local`。开发服务默认位于 `http://127.0.0.1:3000`，后台入口是 `/admin`。`.env.example` 中的默认值只适合本地开发，生产环境必须使用不同的随机密钥。
+Windows PowerShell 使用 `Copy-Item .env.example .env.local`。开发服务默认位于 `http://127.0.0.1:3000`，后台入口是 `/admin`。`.env.example` 中的默认值只适合本地开发；生产环境无需配置密钥，首次启动会自动生成并持久化。
 
 提交前可执行完整检查：
 

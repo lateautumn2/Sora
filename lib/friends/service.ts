@@ -44,7 +44,9 @@ function isFriendLinkUrlConflict(error: unknown): boolean {
 }
 
 export function countFriendLinks(): number {
-  const row = getDatabaseConnection().sqlite.prepare("SELECT COUNT(*) AS total FROM friend_links").get() as {
+  const row = getDatabaseConnection()
+    .sqlite.prepare("SELECT COUNT(*) AS total FROM friend_links")
+    .get() as {
     total: number;
   };
   return row.total;

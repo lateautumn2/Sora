@@ -10,7 +10,6 @@ test("cms authenticated publishing workflow", async ({ page }) => {
     await page.getByLabel("邮箱").fill("acceptance@example.com");
     await page.getByLabel("密码", { exact: true }).fill("acceptance-password-2026");
     await page.getByLabel("确认密码").fill("acceptance-password-2026");
-    await page.getByLabel("初始化令牌").fill(process.env.SETUP_TOKEN ?? "");
     await page.getByRole("button", { name: "创建管理员" }).click();
   } else {
     await page.goto("/admin/login");

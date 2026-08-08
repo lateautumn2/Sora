@@ -1,13 +1,13 @@
 # Sora 博客 — Docker Compose 部署配置
 #
-# 配置直接写在本文件中，不依赖 .env，部署只需：
+# 全部配置直接写在本文件中，不依赖 .env，部署只需：
 #   docker compose up -d
 #
 # 说明：
-#   - 数据库迁移在容器启动时自动执行，无需手动运行迁移命令
+#   - 首次启动自动建表并应用数据库迁移，无需手动执行迁移命令
+#   - AUTH_SECRET / VISITOR_HASH_SECRET 首次启动自动生成并持久化到 data/secrets/
+#   - 站点地址与可信来源在后台 /admin/settings 修改，保存后立即生效，无需重启
 #   - 完整备份与恢复请在网页端 /admin/data 完成
-#   - 三个密钥已生成随机值；若仓库公开或需要更换，修改后再启动，
-#     并保证每个值至少 32 字符
 
 name: sora-blog
 
@@ -17,13 +17,6 @@ services:
     restart: unless-stopped
     init: true
     environment:
-      NODE_ENV: production
-      APP_URL: http://localhost:3000
-      AUTH_SECRET: 086d5d63c6cd4e059522347ff051083fc40ab18d63d149c89cddec7fbc7c032f
-      VISITOR_HASH_SECRET: 4045fb68f9bb461cacf2ba7f06cae7a8d43fbc7f7a6144f6979c30638d62788d
-      SETUP_TOKEN: 8266504b8fb447f8827a4ca723bbef43e6b2995669804231a1eb8169988dc6eb
-      TRUSTED_ORIGINS: http://localhost:3000
-      LOG_LEVEL: info
       DATABASE_PATH: /app/data/blog.db
       UPLOAD_DIR: /app/data/uploads
     ports:

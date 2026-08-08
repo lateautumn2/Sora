@@ -29,7 +29,6 @@ describe("single administrator authentication", () => {
       APP_URL: "http://localhost:3000",
       AUTH_SECRET: "test-auth-secret-that-is-at-least-32-characters",
       VISITOR_HASH_SECRET: "test-visitor-secret-that-is-at-least-32-characters",
-      SETUP_TOKEN: "test-setup-token-that-is-at-least-32-characters",
     });
     const testAuth = createTestAuth(connection.sqlite, environment);
 

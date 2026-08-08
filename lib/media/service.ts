@@ -29,15 +29,24 @@ export interface MediaItem {
   createdAt: number;
 }
 
-export function listMedia(): MediaItem[] {
+export function listMedia(limit = 30, offset = 0): MediaItem[] {
   return getDatabaseConnection()
     .sqlite.prepare(
       `SELECT id, storage_key AS storageKey, original_name AS originalName,
               mime_type AS mimeType, byte_size AS byteSize, width, height,
               sha256, alt_text AS altText, created_at AS createdAt
-       FROM media ORDER BY created_at DESC`,
+       FROM media ORDER BY created_at DESC
+       LIMIT ? OFFSET ?`,
     )
-    .all() as MediaItem[];
+    .all(limit, offset) as MediaItem[];
+}
+
+/** 统计媒体文件总数，供媒体页分页计算总页数。 */
+export function countMedia(): number {
+  const row = getDatabaseConnection()
+    .sqlite.prepare("SELECT COUNT(*) AS total FROM media")
+    .get() as { total: number };
+  return row.total;
 }
 
 export async function storeMedia(file: File, altText: string): Promise<MediaItem> {
@@ -59,7 +68,7 @@ export async function storeMedia(file: File, altText: string): Promise<MediaItem
 
   const now = new Date();
   const id = randomUUID();
-  const storageKey = `${now.getUTCFullYear()}/${String(now.getUTCMonth() + 1).padStart(2, "0")}/${id}.${format.extension}`;
+  const storageKey = `${now.getUTCFullYear()}/${String(now.getUTCMonth() + 1).padStart(2, "0")}/${String(now.getUTCDate()).padStart(2, "0")}/${String(now.getUTCHours()).padStart(2, "0")}${String(now.getUTCMinutes()).padStart(2, "0")}${String(now.getUTCSeconds()).padStart(2, "0")}-${id}.${format.extension}`;
   const uploadRoot = resolve(getEnvironment().uploadDir);
   const targetPath = resolve(uploadRoot, storageKey);
   if (!targetPath.startsWith(`${uploadRoot}${sep}`)) {

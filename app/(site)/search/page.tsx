@@ -1,17 +1,27 @@
 import { Search } from "lucide-react";
 
 import { PostList } from "@/components/site/post-list";
-import { searchPublishedPosts } from "@/lib/content/service";
+import { PostPagination } from "@/components/site/post-pagination";
+import { countSearchPublishedPosts, searchPublishedPosts } from "@/lib/content/service";
+import {
+  resolvePage,
+  resolveTotalPages,
+  SITE_PAGE_SIZE,
+} from "@/lib/content/pagination";
 
 export const metadata = { title: "搜索" };
 
 export default async function SearchPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; page?: string }>;
 }) {
   const query = (await searchParams).q?.trim() ?? "";
-  const posts = query ? searchPublishedPosts(query) : [];
+  const page = resolvePage((await searchParams).page);
+  const posts = query
+    ? searchPublishedPosts(query, SITE_PAGE_SIZE, (page - 1) * SITE_PAGE_SIZE)
+    : [];
+  const totalPages = query ? resolveTotalPages(countSearchPublishedPosts(query)) : 0;
 
   return (
     <div className="sora-search-page">
@@ -36,6 +46,7 @@ export default async function SearchPage({
       {query ? (
         <div className="mt-8">
           <PostList emptyText={`暂未找到与“${query}”匹配的文章`} posts={posts} />
+          <PostPagination basePath="/search" extraQuery={{ q: query }} page={page} totalPages={totalPages} />
         </div>
       ) : (
         <div className="py-12 text-center text-sm text-[var(--muted)]">输入关键词开始搜索</div>

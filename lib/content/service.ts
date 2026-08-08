@@ -160,7 +160,7 @@ function hydrateDetail(row: ContentRow | undefined): ContentDetail | null {
   };
 }
 
-export function listPublishedPosts(limit = 10): ContentSummary[] {
+export function listPublishedPosts(limit = 10, offset = 0): ContentSummary[] {
   const rows = getDatabaseConnection()
     .sqlite.prepare(
       `SELECT ${summaryColumns}
@@ -170,10 +170,25 @@ export function listPublishedPosts(limit = 10): ContentSummary[] {
          AND p.visibility = 'PUBLIC'
          AND p.published_at <= ?
        ORDER BY p.pinned DESC, p.published_at DESC
-       LIMIT ?`,
+       LIMIT ? OFFSET ?`,
     )
-    .all(Date.now(), limit) as ContentRow[];
+    .all(Date.now(), limit, offset) as ContentRow[];
   return hydrateRows(rows);
+}
+
+/** 统计公开文章总数，供列表分页计算总页数。 */
+export function countPublishedPosts(): number {
+  const row = getDatabaseConnection()
+    .sqlite.prepare(
+      `SELECT COUNT(*) AS total
+       FROM posts p
+       WHERE p.kind = 'POST'
+         AND p.status = 'PUBLISHED'
+         AND p.visibility = 'PUBLIC'
+         AND p.published_at <= ?`,
+    )
+    .get(Date.now()) as { total: number };
+  return row.total;
 }
 
 export function listPublishedPages(): ContentSummary[] {
@@ -210,15 +225,42 @@ export function getPublishedContentBySlug(
   return hydrateDetail(row);
 }
 
-export function listAdminContents(kind: "POST" | "PAGE"): ContentSummary[] {
+/** 后台内容列表总数（不含回收站），用于分页计算。 */
+export function countAdminContents(
+  kind: "POST" | "PAGE",
+  status: "ACTIVE" | "TRASHED" = "ACTIVE",
+): number {
+  const statusClause = status === "TRASHED" ? "p.status = 'TRASHED'" : "p.status <> 'TRASHED'";
+  const { total } = getDatabaseConnection()
+    .sqlite.prepare(
+      `SELECT COUNT(*) AS total
+       FROM posts p
+       WHERE p.kind = ? AND ${statusClause}`,
+    )
+    .get(kind) as { total: number };
+  return total;
+}
+
+/**
+ * 后台内容列表（不含回收站）。
+ * limit/offset 省略时返回全部，兼容页面（pages）等不分页的调用方。
+ */
+export function listAdminContents(
+  kind: "POST" | "PAGE",
+  limit?: number,
+  offset = 0,
+  status: "ACTIVE" | "TRASHED" = "ACTIVE",
+): ContentSummary[] {
+  const statusClause = status === "TRASHED" ? "p.status = 'TRASHED'" : "p.status <> 'TRASHED'";
   const rows = getDatabaseConnection()
     .sqlite.prepare(
       `SELECT ${summaryColumns}
        FROM posts p
-       WHERE p.kind = ? AND p.status <> 'TRASHED'
-       ORDER BY p.updated_at DESC`,
+       WHERE p.kind = ? AND ${statusClause}
+       ORDER BY p.updated_at DESC
+       LIMIT ? OFFSET ?`,
     )
-    .all(kind) as ContentRow[];
+    .all(kind, limit ?? Number.MAX_SAFE_INTEGER, offset) as ContentRow[];
   return hydrateRows(rows);
 }
 
@@ -353,7 +395,19 @@ export function trashContent(id: string): void {
     .run(Date.now(), id);
 }
 
-export function listCategories(includePrivate = false): TaxonomyItem[] {
+export function restoreContent(id: string): void {
+  getDatabaseConnection()
+    .sqlite.prepare(
+      "UPDATE posts SET status = 'DRAFT', updated_at = ? WHERE id = ? AND status = 'TRASHED'",
+    )
+    .run(Date.now(), id);
+}
+
+export function listCategories(
+  includePrivate = false,
+  limit?: number,
+  offset = 0,
+): TaxonomyItem[] {
   const visibility = includePrivate
     ? "p.kind = 'POST' AND p.status <> 'TRASHED'"
     : "p.kind = 'POST' AND p.status = 'PUBLISHED' AND p.visibility = 'PUBLIC' AND p.published_at <= @now";
@@ -364,12 +418,17 @@ export function listCategories(includePrivate = false): TaxonomyItem[] {
        LEFT JOIN post_categories pc ON pc.category_id = c.id
        LEFT JOIN posts p ON p.id = pc.post_id AND ${visibility}
        GROUP BY c.id
-       ORDER BY c.sort_order, c.name`,
+       ORDER BY c.sort_order, c.name
+       LIMIT @limit OFFSET @offset`,
     )
-    .all({ now: Date.now() }) as TaxonomyItem[];
+    .all({ now: Date.now(), limit: limit ?? Number.MAX_SAFE_INTEGER, offset }) as TaxonomyItem[];
 }
 
-export function listTags(includePrivate = false): TaxonomyItem[] {
+export function listTags(
+  includePrivate = false,
+  limit?: number,
+  offset = 0,
+): TaxonomyItem[] {
   const visibility = includePrivate
     ? "p.kind = 'POST' AND p.status <> 'TRASHED'"
     : "p.kind = 'POST' AND p.status = 'PUBLISHED' AND p.visibility = 'PUBLIC' AND p.published_at <= @now";
@@ -380,15 +439,24 @@ export function listTags(includePrivate = false): TaxonomyItem[] {
        LEFT JOIN post_tags pt ON pt.tag_id = t.id
        LEFT JOIN posts p ON p.id = pt.post_id AND ${visibility}
        GROUP BY t.id
-       ORDER BY t.name`,
+       ORDER BY t.name
+       LIMIT @limit OFFSET @offset`,
     )
-    .all({ now: Date.now() }) as TaxonomyItem[];
+    .all({ now: Date.now(), limit: limit ?? Number.MAX_SAFE_INTEGER, offset }) as TaxonomyItem[];
+}
+
+export function countTaxonomies(type: "category" | "tag"): number {
+  const table = type === "category" ? "categories" : "tags";
+  const row = getDatabaseConnection().sqlite.prepare(`SELECT COUNT(*) AS total FROM ${table}`).get() as { total: number };
+  return row.total;
 }
 
 export function getTaxonomyPosts(
   type: "category" | "tag",
   slug: string,
-): { taxonomy: TaxonomyItem; posts: ContentSummary[] } | null {
+  limit = 10,
+  offset = 0,
+): { taxonomy: TaxonomyItem; posts: ContentSummary[]; total: number } | null {
   const sqlite = getDatabaseConnection().sqlite;
   const table = type === "category" ? "categories" : "tags";
   const joinTable = type === "category" ? "post_categories" : "post_tags";
@@ -400,6 +468,18 @@ export function getTaxonomyPosts(
     return null;
   }
 
+  const totalRow = sqlite
+    .prepare(
+      `SELECT COUNT(*) AS total
+       FROM posts p
+       JOIN ${joinTable} x ON x.post_id = p.id
+       WHERE x.${foreignKey} = ?
+         AND p.kind = 'POST'
+         AND p.status = 'PUBLISHED'
+         AND p.visibility = 'PUBLIC'
+         AND p.published_at <= ?`,
+    )
+    .get(taxonomy.id, Date.now()) as { total: number };
   const rows = sqlite
     .prepare(
       `SELECT ${summaryColumns}
@@ -410,19 +490,16 @@ export function getTaxonomyPosts(
          AND p.status = 'PUBLISHED'
          AND p.visibility = 'PUBLIC'
          AND p.published_at <= ?
-       ORDER BY p.published_at DESC`,
+       ORDER BY p.published_at DESC
+       LIMIT ? OFFSET ?`,
     )
-    .all(taxonomy.id, Date.now()) as ContentRow[];
+    .all(taxonomy.id, Date.now(), limit, offset) as ContentRow[];
   const posts = hydrateRows(rows);
-  return { taxonomy: { ...taxonomy, count: posts.length }, posts };
+  return { taxonomy: { ...taxonomy, count: totalRow.total }, posts, total: totalRow.total };
 }
 
-export function searchPublishedPosts(query: string, limit = 20): ContentSummary[] {
-  const terms = query
-    .normalize("NFKC")
-    .match(/[\p{Letter}\p{Number}]+/gu)
-    ?.map((term) => `"${term.replaceAll('"', '""')}"`)
-    .join(" AND ");
+export function searchPublishedPosts(query: string, limit = 20, offset = 0): ContentSummary[] {
+  const terms = buildSearchTerms(query);
   if (!terms) {
     return [];
   }
@@ -435,10 +512,39 @@ export function searchPublishedPosts(query: string, limit = 20): ContentSummary[
        WHERE posts_fts MATCH ?
          AND p.published_at <= ?
        ORDER BY bm25(posts_fts), p.published_at DESC
-       LIMIT ?`,
+       LIMIT ? OFFSET ?`,
     )
-    .all(terms, Date.now(), limit) as ContentRow[];
+    .all(terms, Date.now(), limit, offset) as ContentRow[];
   return hydrateRows(rows);
+}
+
+/** 统计搜索结果总数，供搜索页分页计算总页数。 */
+export function countSearchPublishedPosts(query: string): number {
+  const terms = buildSearchTerms(query);
+  if (!terms) {
+    return 0;
+  }
+  const row = getDatabaseConnection()
+    .sqlite.prepare(
+      `SELECT COUNT(*) AS total
+       FROM posts_fts f
+       JOIN posts p ON p.id = f.post_id
+       WHERE posts_fts MATCH ?
+         AND p.published_at <= ?`,
+    )
+    .get(terms, Date.now()) as { total: number };
+  return row.total;
+}
+
+/** 把用户输入拆成 FTS5 匹配表达式；无有效关键词时返回空串。 */
+function buildSearchTerms(query: string): string {
+  return (
+    query
+      .normalize("NFKC")
+      .match(/[\p{Letter}\p{Number}]+/gu)
+      ?.map((term) => `"${term.replaceAll('"', '""')}"`)
+      .join(" AND ") ?? ""
+  );
 }
 
 export function saveTaxonomy(
@@ -502,19 +608,79 @@ export function saveSiteSettings(value: SiteSettings): void {
     .run(JSON.stringify(value), Date.now());
 }
 
+/** 仪表盘访问量排行中的单篇文章行。 */
+export interface DashboardTopPost {
+  id: string;
+  title: string;
+  slug: string;
+  viewCount: number;
+  commentCount: number;
+  publishedAt: number | null;
+}
+
+/**
+ * 按访问量降序分页查询已发布文章，供仪表盘"每篇文章访问量"表格使用。
+ * 返回当前页数据与总文章数，便于计算总页数。
+ */
+export function listTopPostsByViews(limit: number, offset: number): {
+  posts: DashboardTopPost[];
+  total: number;
+} {
+  const sqlite = getDatabaseConnection().sqlite;
+  const { total } = sqlite
+    .prepare(
+      `SELECT COUNT(*) AS total
+       FROM posts
+       WHERE kind = 'POST' AND status = 'PUBLISHED'`,
+    )
+    .get() as { total: number };
+  const posts = sqlite
+    .prepare(
+      `SELECT id, title, slug, view_count AS viewCount,
+              comment_count AS commentCount, published_at AS publishedAt
+       FROM posts
+       WHERE kind = 'POST' AND status = 'PUBLISHED'
+       ORDER BY view_count DESC, published_at DESC
+       LIMIT ? OFFSET ?`,
+    )
+    .all(limit, offset) as DashboardTopPost[];
+  return { posts, total };
+}
+
 export function getDashboardStats(): {
   publishedPosts: number;
   pendingComments: number;
   totalViews: number;
+  totalComments: number;
+  topPosts: DashboardTopPost[];
 } {
-  return getDatabaseConnection()
-    .sqlite.prepare(
+  const sqlite = getDatabaseConnection().sqlite;
+  const summary = sqlite
+    .prepare(
       `SELECT
          (SELECT COUNT(*) FROM posts WHERE kind = 'POST' AND status = 'PUBLISHED') AS publishedPosts,
          (SELECT COUNT(*) FROM comments WHERE status = 'PENDING') AS pendingComments,
-         (SELECT COALESCE(SUM(view_count), 0) FROM posts) AS totalViews`,
+         (SELECT COALESCE(SUM(view_count), 0) FROM posts) AS totalViews,
+         (SELECT COALESCE(SUM(comment_count), 0) FROM posts) AS totalComments`,
     )
-    .get() as { publishedPosts: number; pendingComments: number; totalViews: number };
+    .get() as {
+    publishedPosts: number;
+    pendingComments: number;
+    totalViews: number;
+    totalComments: number;
+  };
+  // 图表只需要全站访问量最高的 10 篇；完整分页列表由 listTopPostsByViews 提供。
+  const topPosts = sqlite
+    .prepare(
+      `SELECT id, title, slug, view_count AS viewCount,
+              comment_count AS commentCount, published_at AS publishedAt
+       FROM posts
+       WHERE kind = 'POST' AND status = 'PUBLISHED'
+       ORDER BY view_count DESC, published_at DESC
+       LIMIT 10`,
+    )
+    .all() as DashboardTopPost[];
+  return { ...summary, topPosts };
 }
 
 export interface PrimaryMenuItem {

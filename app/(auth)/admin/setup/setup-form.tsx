@@ -88,13 +88,6 @@ export function SetupForm() {
         name="confirmPassword"
         type="password"
       />
-      <Field
-        autoComplete="off"
-        error={state.fields?.setupToken}
-        label="初始化令牌"
-        name="setupToken"
-        type="password"
-      />
       <div className="pt-2">
         <SubmitButton />
       </div>

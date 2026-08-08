@@ -1,16 +1,20 @@
+"use client";
+
 import {
   BookOpenText,
+  DatabaseBackup,
   FileText,
   FolderTree,
   Image,
   LayoutDashboard,
+  Link2,
   MessageSquareText,
   Navigation,
-  DatabaseBackup,
   Settings,
   Tags,
 } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 const adminNavigation = [
   { href: "/admin", label: "仪表盘", icon: LayoutDashboard },
@@ -21,23 +25,29 @@ const adminNavigation = [
   { href: "/admin/comments", label: "评论", icon: MessageSquareText },
   { href: "/admin/media", label: "媒体", icon: Image },
   { href: "/admin/menus", label: "菜单", icon: Navigation },
+  { href: "/admin/friends", label: "友链", icon: Link2 },
   { href: "/admin/data", label: "数据管理", icon: DatabaseBackup },
   { href: "/admin/settings", label: "设置", icon: Settings },
 ] as const;
 
 export function AdminSidebar() {
+  const pathname = usePathname();
+
   return (
-    <aside className="hidden w-60 shrink-0 border-r border-[var(--border)] bg-[var(--surface)] lg:block">
-      <div className="sticky top-0 p-4">
-        <Link className="mb-5 block px-3 py-2 font-serif text-lg font-semibold" href="/admin">
+    <aside className="admin-sidebar hidden lg:block">
+      <div className="admin-sidebar-panel">
+        <Link className="admin-brand" href="/admin">
           Sora 管理
         </Link>
-        <nav aria-label="后台导航" className="space-y-1">
+        <nav aria-label="后台导航" className="admin-nav">
           {adminNavigation.map((item) => {
             const Icon = item.icon;
+            const active =
+              item.href === "/admin" ? pathname === item.href : pathname.startsWith(item.href);
             return (
               <Link
-                className="flex h-10 items-center gap-3 rounded-[var(--radius)] px-3 text-sm text-[var(--muted)] hover:bg-white hover:text-[var(--text)]"
+                aria-current={active ? "page" : undefined}
+                className={active ? "admin-nav-link admin-nav-link-active" : "admin-nav-link"}
                 href={item.href}
                 key={item.href}
               >

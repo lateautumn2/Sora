@@ -11,6 +11,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { PostInteractions } from "@/components/site/post-interactions";
+import { PostBackButton } from "@/components/site/post-back-button";
+import { PostContent } from "@/components/site/post-content";
 import { PostToc } from "@/components/site/post-toc";
 import { formatSoraDate, getPublishedDays } from "@/components/site/site-format";
 import { listPublicComments } from "@/lib/comments/service";
@@ -86,11 +88,7 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
       </div>
 
       <section className="sora-reading-surface">
-        <div
-          className="prose-content"
-          dangerouslySetInnerHTML={{ __html: post.renderedHtml }}
-          id="post-content"
-        />
+        <PostContent html={post.renderedHtml} />
         <PostToc />
       </section>
 
@@ -142,12 +140,13 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
         ) : null}
       </section>
       <PostInteractions
-        allowComment={post.allowComment}
+        allowComment={settings.allowComments && post.allowComment}
         comments={listPublicComments(post.id)}
         initialUpvoteCount={post.upvoteCount}
         initialViewCount={post.viewCount}
         postId={post.id}
       />
+      <PostBackButton />
     </article>
   );
 }

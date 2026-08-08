@@ -1,8 +1,11 @@
 "use client";
 
-import { markdown } from "@codemirror/lang-markdown";
-import CodeMirror from "@uiw/react-codemirror";
-import { Eye, Save, Trash2 } from "lucide-react";
+import gfm from "@bytemd/plugin-gfm";
+import { Editor } from "@bytemd/react";
+import zhHans from "bytemd/locales/zh_Hans.json";
+import "bytemd/dist/index.css";
+import { ArrowLeft, ChevronDown, Save, Trash2 } from "lucide-react";
+import Link from "next/link";
 import { useActionState, useMemo, useState } from "react";
 
 import {
@@ -10,7 +13,7 @@ import {
   trashContentAction,
   type ContentActionState,
 } from "@/app/(admin)/admin/content-actions";
-import { renderContent } from "@/lib/content/render";
+import { CategorySelect, TagMultiSelect } from "@/components/admin/taxonomy-selectors";
 import type { ContentDetail, TaxonomyItem } from "@/lib/content/service";
 import { normalizeSlug } from "@/lib/content/validation";
 
@@ -21,151 +24,107 @@ interface ContentEditorProps {
   tags: TaxonomyItem[];
 }
 
+interface UploadResult {
+  data?: { url: string; alt?: string; title?: string };
+  error?: { message?: string };
+}
+
 const initialState: ContentActionState = {};
 
+/**
+ * 文章/页面编辑器。
+ * 采用 ByteMD（开源 Markdown 编辑器），支持工具栏、左右分屏预览和图片上传；
+ * 布局刻意精简：第一屏只有标题与正文，属性设置全部收进折叠面板，便于沉浸写作。
+ */
 export function ContentEditor({ kind, content, categories, tags }: ContentEditorProps) {
   const [state, formAction, pending] = useActionState(saveContentAction, initialState);
   const [title, setTitle] = useState(content?.title ?? "");
   const [slug, setSlug] = useState(content?.slug ?? "");
   const [slugEdited, setSlugEdited] = useState(Boolean(content?.slug));
   const [source, setSource] = useState(content?.sourceContent ?? "");
-  const [mode, setMode] = useState<"edit" | "preview">("edit");
-  const preview = useMemo(() => renderContent(source, "MARKDOWN").html, [source]);
   const noun = kind === "POST" ? "文章" : "页面";
+  const listHref = kind === "POST" ? "/admin/posts" : "/admin/pages";
+  const plugins = useMemo(() => [gfm()], []);
+
+  async function uploadImages(files: File[]): Promise<Array<{ url: string; alt?: string }>> {
+    const uploaded: Array<{ url: string; alt?: string }> = [];
+    for (const file of files) {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("altText", "");
+      const response = await fetch("/api/v1/admin/media", { method: "POST", body: form });
+      const payload = (await response.json()) as UploadResult;
+      if (!response.ok || !payload.data) {
+        throw new Error(payload.error?.message ?? "图片上传失败");
+      }
+      uploaded.push({ url: payload.data.url, alt: payload.data.alt });
+    }
+    return uploaded;
+  }
 
   return (
-    <div>
-      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-[var(--border)] pb-5">
-        <div>
-          <h1 className="text-2xl font-semibold">{content ? `编辑${noun}` : `新建${noun}`}</h1>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            保存会生成修订记录；选择已发布后内容立即公开。
-          </p>
-        </div>
-        <div
-          aria-label="编辑模式"
-          className="inline-flex rounded-[var(--radius)] border border-[var(--border)] p-1"
+    <div className="content-editor">
+      <header className="content-editor-toolbar">
+        <Link
+          className="content-editor-toolbar-back text-sm text-[var(--muted)] hover:text-[var(--primary)]"
+          href={listHref}
         >
+          <ArrowLeft aria-hidden="true" size={16} />
+          返回列表
+        </Link>
+        <div className="content-editor-toolbar-actions">
           <button
-            aria-pressed={mode === "edit"}
-            className={`h-8 px-3 text-sm ${mode === "edit" ? "bg-[var(--surface-strong)]" : "text-[var(--muted)]"}`}
-            onClick={() => setMode("edit")}
-            type="button"
+            className="inline-flex h-9 items-center gap-2 rounded-[var(--radius)] bg-[var(--primary)] px-4 text-sm font-medium text-white hover:bg-[var(--primary-hover)] disabled:opacity-60"
+            disabled={pending}
+            form="content-editor-form"
+            type="submit"
           >
-            编辑
-          </button>
-          <button
-            aria-pressed={mode === "preview"}
-            className={`inline-flex h-8 items-center gap-1.5 px-3 text-sm ${mode === "preview" ? "bg-[var(--surface-strong)]" : "text-[var(--muted)]"}`}
-            onClick={() => setMode("preview")}
-            type="button"
-          >
-            <Eye aria-hidden="true" size={15} />
-            预览
+            <Save aria-hidden="true" size={16} />
+            {pending ? "正在保存…" : "保存内容"}
           </button>
         </div>
       </header>
 
-      <form action={formAction} className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_18rem]">
+      <form action={formAction} className="content-editor-form" id="content-editor-form">
         <input name="kind" type="hidden" value={kind} />
         {content ? <input name="id" type="hidden" value={content.id} /> : null}
         <input name="sourceFormat" type="hidden" value="MARKDOWN" />
         <input name="sourceContent" type="hidden" value={source} />
 
-        <div className="min-w-0 space-y-5">
-          <label className="grid gap-2 text-sm font-medium">
-            标题
-            <input
-              className="h-12 border-b border-[var(--border)] text-2xl font-semibold outline-none focus:border-[var(--primary)]"
-              maxLength={200}
-              name="title"
-              onChange={(event) => {
-                const nextTitle = event.target.value;
-                setTitle(nextTitle);
-                if (!slugEdited) setSlug(normalizeSlug(nextTitle));
-              }}
-              placeholder={`${noun}标题`}
-              required
-              value={title}
-            />
-          </label>
+        <input
+          aria-label={`${noun}标题`}
+          className="content-editor-title"
+          maxLength={200}
+          name="title"
+          onChange={(event) => {
+            const nextTitle = event.target.value;
+            setTitle(nextTitle);
+            if (!slugEdited) setSlug(normalizeSlug(nextTitle));
+          }}
+          placeholder={`输入${noun}标题…`}
+          required
+          value={title}
+        />
 
-          <label className="grid gap-2 text-sm font-medium">
-            URL 别名
-            <input
-              className="h-10 rounded-[var(--radius)] border border-[var(--border)] px-3 font-mono text-sm outline-none focus:border-[var(--primary)]"
-              maxLength={160}
-              name="slug"
-              onChange={(event) => {
-                setSlugEdited(true);
-                setSlug(event.target.value);
-              }}
-              placeholder="article-slug"
-              required
-              value={slug}
-            />
-          </label>
-
-          {mode === "edit" ? (
-            <div className="overflow-hidden rounded-[var(--radius)] border border-[var(--border)]">
-              <CodeMirror
-                aria-label={`${noun}正文`}
-                basicSetup={{ lineNumbers: true, foldGutter: true }}
-                extensions={[markdown()]}
-                height="34rem"
-                onChange={setSource}
-                placeholder="使用 Markdown 开始写作..."
-                value={source}
-              />
-            </div>
-          ) : (
-            <article
-              className="prose-content min-h-[34rem] rounded-[var(--radius)] border border-[var(--border)] p-5 md:p-8"
-              dangerouslySetInnerHTML={{ __html: preview }}
-            />
-          )}
-
-          <label className="grid gap-2 text-sm font-medium">
-            摘要（留空时从正文生成）
-            <textarea
-              className="min-h-24 resize-y rounded-[var(--radius)] border border-[var(--border)] p-3 font-normal leading-6 outline-none focus:border-[var(--primary)]"
-              defaultValue={content?.excerpt}
-              maxLength={500}
-              name="excerpt"
-            />
-          </label>
-
-          <details className="rounded-[var(--radius)] border border-[var(--border)] p-4">
-            <summary className="cursor-pointer text-sm font-medium">SEO 设置</summary>
-            <div className="mt-4 grid gap-4">
-              <label className="grid gap-2 text-sm">
-                SEO 标题
-                <input className="form-input" defaultValue={content?.seoTitle} name="seoTitle" />
-              </label>
-              <label className="grid gap-2 text-sm">
-                SEO 描述
-                <textarea
-                  className="form-textarea"
-                  defaultValue={content?.seoDescription}
-                  name="seoDescription"
-                />
-              </label>
-              <label className="grid gap-2 text-sm">
-                规范链接
-                <input
-                  className="form-input"
-                  defaultValue={content?.canonicalUrl}
-                  name="canonicalUrl"
-                  type="url"
-                />
-              </label>
-            </div>
-          </details>
+        <div className="content-editor-body">
+          <Editor
+            locale={zhHans}
+            mode="split"
+            onChange={setSource}
+            placeholder="从这里开始写作，支持 Markdown 语法与图片上传…"
+            plugins={plugins}
+            uploadImages={uploadImages}
+            value={source}
+          />
         </div>
 
-        <aside className="space-y-5 xl:sticky xl:top-6 xl:self-start">
-          <section className="space-y-4 rounded-[var(--radius)] border border-[var(--border)] p-4">
-            <label className="grid gap-2 text-sm font-medium">
+        <details className="content-editor-settings">
+          <summary>
+            <span>文章设置</span>
+            <ChevronDown aria-hidden="true" className="content-editor-summary-icon" size={16} />
+          </summary>
+          <div className="content-editor-settings-grid">
+            <label className="grid gap-2 text-sm">
               状态
               <select
                 className="form-input"
@@ -177,7 +136,7 @@ export function ContentEditor({ kind, content, categories, tags }: ContentEditor
                 <option value="ARCHIVED">已归档</option>
               </select>
             </label>
-            <label className="grid gap-2 text-sm font-medium">
+            <label className="grid gap-2 text-sm">
               可见性
               <select
                 className="form-input"
@@ -185,64 +144,100 @@ export function ContentEditor({ kind, content, categories, tags }: ContentEditor
                 name="visibility"
               >
                 <option value="PUBLIC">公开</option>
-                <option value="PRIVATE">私密</option>
+                <option value="PRIVATE">私有</option>
               </select>
             </label>
-            {kind === "POST" ? (
-              <label className="flex items-center gap-2 text-sm">
-                <input defaultChecked={content?.pinned} name="pinned" type="checkbox" />
-                置顶文章
-              </label>
-            ) : null}
-            <label className="flex items-center gap-2 text-sm">
+            <label className="grid gap-2 text-sm">
+              URL 别名
               <input
-                defaultChecked={content?.allowComment ?? true}
-                name="allowComment"
-                type="checkbox"
+                className="form-input font-mono"
+                maxLength={160}
+                name="slug"
+                onChange={(event) => {
+                  setSlugEdited(true);
+                  setSlug(event.target.value);
+                }}
+                placeholder="article-slug"
+                required
+                value={slug}
               />
-              允许评论
             </label>
-          </section>
-
-          {kind === "POST" ? (
-            <>
-              <TaxonomyPicker
-                items={categories}
-                name="categoryIds"
-                selected={content?.categories ?? []}
-                title="分类"
+            <label className="grid gap-2 text-sm">
+              摘要（留空时从正文生成）
+              <textarea
+                className="form-textarea"
+                defaultValue={content?.excerpt}
+                maxLength={500}
+                name="excerpt"
               />
-              <TaxonomyPicker
-                items={tags}
-                name="tagIds"
-                selected={content?.tags ?? []}
-                title="标签"
-              />
-            </>
-          ) : null}
+            </label>
 
-          {state.error ? (
-            <p
-              className="rounded-[var(--radius)] border border-red-200 bg-red-50 p-3 text-sm text-[var(--danger)]"
-              role="alert"
-            >
-              {state.error}
-            </p>
-          ) : null}
+            {kind === "POST" ? (
+              <fieldset className="content-editor-checks">
+                <legend className="text-sm font-medium">选项</legend>
+                <label className="flex items-center gap-2 text-sm">
+                  <input defaultChecked={content?.pinned} name="pinned" type="checkbox" />
+                  置顶文章
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    defaultChecked={content?.allowComment ?? true}
+                    name="allowComment"
+                    type="checkbox"
+                  />
+                  允许评论
+                </label>
+              </fieldset>
+            ) : null}
 
-          <button
-            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-[var(--radius)] bg-[var(--primary)] px-4 text-sm font-medium text-white hover:bg-[var(--primary-hover)] disabled:opacity-60"
-            disabled={pending}
-            type="submit"
+            <details className="content-editor-seo">
+              <summary className="text-sm font-medium">SEO 设置</summary>
+              <div className="mt-3 grid gap-4">
+                <label className="grid gap-2 text-sm">
+                  SEO 标题
+                  <input className="form-input" defaultValue={content?.seoTitle} name="seoTitle" />
+                </label>
+                <label className="grid gap-2 text-sm">
+                  SEO 描述
+                  <textarea
+                    className="form-textarea"
+                    defaultValue={content?.seoDescription}
+                    name="seoDescription"
+                  />
+                </label>
+                <label className="grid gap-2 text-sm">
+                  规范链接
+                  <input
+                    className="form-input"
+                    defaultValue={content?.canonicalUrl}
+                    name="canonicalUrl"
+                    type="url"
+                  />
+                </label>
+              </div>
+            </details>
+
+            {kind === "POST" ? (
+              <>
+                <CategorySelect items={categories} selected={content?.categories ?? []} />
+                <TagMultiSelect items={tags} selected={content?.tags ?? []} />
+              </>
+            ) : null}
+          </div>
+        </details>
+
+        {state.error ? (
+          <p
+            className="rounded-[var(--radius)] border border-red-200 bg-red-50 p-3 text-sm text-[var(--danger)]"
+            role="alert"
           >
-            <Save aria-hidden="true" size={17} />
-            {pending ? "正在保存..." : "保存内容"}
-          </button>
-        </aside>
+            {state.error}
+          </p>
+        ) : null}
       </form>
 
       {content ? (
-        <form action={trashContentAction} className="mt-8 border-t border-[var(--border)] pt-5">
+        <form action={trashContentAction} className="content-editor-trash">
           <input name="id" type="hidden" value={content.id} />
           <input name="kind" type="hidden" value={kind} />
           <button
@@ -255,41 +250,5 @@ export function ContentEditor({ kind, content, categories, tags }: ContentEditor
         </form>
       ) : null}
     </div>
-  );
-}
-
-function TaxonomyPicker({
-  items,
-  name,
-  selected,
-  title,
-}: {
-  items: TaxonomyItem[];
-  name: "categoryIds" | "tagIds";
-  selected: TaxonomyItem[];
-  title: string;
-}) {
-  const selectedIds = new Set(selected.map((item) => item.id));
-  return (
-    <fieldset className="rounded-[var(--radius)] border border-[var(--border)] p-4">
-      <legend className="px-1 text-sm font-medium">{title}</legend>
-      {items.length > 0 ? (
-        <div className="mt-1 max-h-40 space-y-2 overflow-y-auto">
-          {items.map((item) => (
-            <label className="flex items-center gap-2 text-sm" key={item.id}>
-              <input
-                defaultChecked={selectedIds.has(item.id)}
-                name={name}
-                type="checkbox"
-                value={item.id}
-              />
-              {item.name}
-            </label>
-          ))}
-        </div>
-      ) : (
-        <p className="text-sm text-[var(--muted)]">暂无可选项</p>
-      )}
-    </fieldset>
   );
 }

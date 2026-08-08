@@ -1,16 +1,22 @@
 // @vitest-environment jsdom
 
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { createElement } from "react";
 import { describe, expect, test, vi } from "vitest";
 
 import { PostList } from "@/components/site/post-list";
+import { PostBackButton } from "@/components/site/post-back-button";
+import { PostContent } from "@/components/site/post-content";
 import { SiteHeader } from "@/components/site/site-header";
 import HomePage from "@/app/(site)/page";
 import PostPage from "@/app/(site)/posts/[slug]/page";
 import { siteSettingsSchema } from "@/lib/content/validation";
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ back: vi.fn(), push: vi.fn() }),
+}));
 
 const samplePost = {
   id: "post-1",
@@ -48,6 +54,7 @@ vi.mock("@/lib/content/service", async (importOriginal) => {
       }),
     listPrimaryMenuItems: () => [],
     listPublishedPosts: () => [samplePost],
+    countPublishedPosts: () => 1,
     getPublishedContentBySlug: () => ({
       ...samplePost,
       sourceContent: "# 正文标题\n\n内容。",
@@ -98,8 +105,16 @@ describe("Sora public UI", () => {
     expect(siteSettingsSchema.parse({}).avatarUrl).toBe("");
   });
 
-  test("uses the homepage identity composition without inner-page headings", () => {
-    const { container } = render(createElement(HomePage));
+  test("defaults global comment settings to enabled moderation", () => {
+    expect(siteSettingsSchema.parse({})).toMatchObject({
+      allowComments: true,
+      requireCommentModeration: true,
+    });
+  });
+
+  test("uses the homepage identity composition without inner-page headings", async () => {
+    const page = await HomePage({ searchParams: Promise.resolve({}) });
+    const { container } = render(page);
 
     expect(container.querySelector(".sora-home")).toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "首页导航" })).toBeVisible();
@@ -114,5 +129,31 @@ describe("Sora public UI", () => {
     expect(screen.getByRole("navigation", { name: "文章目录" })).toBeVisible();
     expect(screen.getByText(/部分内容可能已经发生变化/)).toBeVisible();
     expect(screen.getByText("文章许可")).toBeVisible();
+  });
+
+  test("opens article images in an accessible lightbox", () => {
+    const { container } = render(
+      createElement(PostContent, {
+        html: '<p>正文</p><img alt="示例图" src="/media/example.png" />',
+      }),
+    );
+
+    fireEvent.click(container.querySelector("img") as HTMLImageElement);
+
+    expect(screen.getByRole("dialog", { name: "图片预览" })).toBeVisible();
+    const dialog = screen.getByRole("dialog", { name: "图片预览" });
+    expect(within(dialog).getByRole("img", { name: "示例图" })).toHaveAttribute(
+      "src",
+      "http://localhost:3000/media/example.png",
+    );
+  });
+
+  test("renders a fixed previous-page control for article details", () => {
+    const { container } = render(createElement(PostBackButton));
+
+    expect(within(container).getByRole("button", { name: "返回上一页" })).toHaveAttribute(
+      "title",
+      "返回上一页",
+    );
   });
 });

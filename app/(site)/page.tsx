@@ -2,13 +2,30 @@ import { GitFork, Mail, Rss, Search } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 
+import {
+  countPublishedPosts,
+  getSiteSettings,
+  listPrimaryMenuItems,
+  listPublishedPosts,
+} from "@/lib/content/service";
 import { PostList } from "@/components/site/post-list";
+import { PostPagination } from "@/components/site/post-pagination";
 import { resolveSiteNavigation } from "@/components/site/site-navigation";
-import { getSiteSettings, listPrimaryMenuItems, listPublishedPosts } from "@/lib/content/service";
+import {
+  resolvePage,
+  resolveTotalPages,
+  SITE_PAGE_SIZE,
+} from "@/lib/content/pagination";
 
-export default function HomePage() {
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const page = resolvePage((await searchParams).page);
   const settings = getSiteSettings();
-  const posts = listPublishedPosts(10);
+  const posts = listPublishedPosts(SITE_PAGE_SIZE, (page - 1) * SITE_PAGE_SIZE);
+  const totalPages = resolveTotalPages(countPublishedPosts());
   const navigation = resolveSiteNavigation(listPrimaryMenuItems());
   return (
     <div className="sora-home">
@@ -64,6 +81,7 @@ export default function HomePage() {
 
       <section aria-label="文章列表" className="sora-home-posts">
         <PostList posts={posts} />
+        <PostPagination basePath="/" page={page} totalPages={totalPages} />
       </section>
     </div>
   );

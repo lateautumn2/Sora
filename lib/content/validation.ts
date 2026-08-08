@@ -68,6 +68,8 @@ export const siteSettingsSchema = z.object({
   email: z.union([z.literal(""), z.string().email()]).default(""),
   githubUrl: z.union([z.literal(""), z.string().url()]).default(""),
   footerText: z.string().trim().max(160).default("内容优先，保持克制。"),
+  allowComments: z.boolean().default(true),
+  requireCommentModeration: z.boolean().default(true),
 });
 
 export type SiteSettings = z.infer<typeof siteSettingsSchema>;

@@ -1,18 +1,27 @@
 import { z } from "zod";
 
-const websiteUrlSchema = z.string().trim().url("网址格式不正确").refine((value) => {
-  if (!URL.canParse(value)) {
-    return false;
-  }
-  const protocol = new URL(value).protocol;
-  return protocol === "http:" || protocol === "https:";
-}, "网址仅支持 HTTP 或 HTTPS");
+const websiteUrlSchema = z
+  .string()
+  .trim()
+  .url("网址格式不正确")
+  .refine((value) => {
+    if (!URL.canParse(value)) {
+      return false;
+    }
+    const protocol = new URL(value).protocol;
+    return protocol === "http:" || protocol === "https:";
+  }, "网址仅支持 HTTP 或 HTTPS");
 
-const logoUrlSchema = z.string().trim().refine(
-  (value) => value === "" || value.startsWith("/media/") ||
-    (URL.canParse(value) && new URL(value).protocol === "https:"),
-  "Logo 仅支持 HTTPS 地址或项目内部图片地址",
-);
+const logoUrlSchema = z
+  .string()
+  .trim()
+  .refine(
+    (value) =>
+      value === "" ||
+      value.startsWith("/media/") ||
+      (URL.canParse(value) && new URL(value).protocol === "https:"),
+    "Logo 仅支持 HTTPS 地址或项目内部图片地址",
+  );
 
 export const friendLinkInputSchema = z.object({
   id: z.string().uuid().optional(),

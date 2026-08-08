@@ -1,8 +1,14 @@
-import { ImageUp, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 
-import { listMedia, suggestedMediaMarkdown } from "@/lib/media/service";
+import { MediaAddressTabs, MediaPreview, MediaUploadForm } from "@/components/admin/media-manager";
+import { PostPagination } from "@/components/site/post-pagination";
+import { resolvePage, resolveTotalPages } from "@/lib/content/pagination";
+import { countMedia, listMedia } from "@/lib/media/service";
+import { getRuntimeConfig } from "@/lib/runtime-config";
 
 import { deleteMediaAction, uploadMediaAction } from "./actions";
+
+const MEDIA_PAGE_SIZE = 12;
 
 const noticeText: Record<string, string> = {
   uploaded: "图片已上传",
@@ -15,84 +21,80 @@ const noticeText: Record<string, string> = {
 export default async function AdminMediaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ notice?: string }>;
+  searchParams: Promise<{ notice?: string; page?: string }>;
 }) {
-  const media = listMedia();
-  const notice = (await searchParams).notice;
+  const query = await searchParams;
+  const page = resolvePage(query.page);
+  const media = listMedia(MEDIA_PAGE_SIZE, (page - 1) * MEDIA_PAGE_SIZE);
+  const totalPages = resolveTotalPages(countMedia(), MEDIA_PAGE_SIZE);
+  const appUrl = getRuntimeConfig().appUrl;
+
   return (
-    <div>
-      <header className="border-b border-[var(--border)] pb-5">
-        <h1 className="text-2xl font-semibold">媒体</h1>
-        <p className="mt-1 text-sm text-[var(--muted)]">上传文章图片并复制 Markdown 地址</p>
+    <div className="admin-page">
+      <header className="admin-page-header">
+        <div>
+          <h1>图片管理</h1>
+          <p>仅上传图片，选择地址类型后自动复制</p>
+        </div>
+        <span className="admin-page-badge">{countMedia()} 张图片</span>
       </header>
-      {notice && noticeText[notice] ? (
-        <p
-          className="mt-5 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] p-3 text-sm"
-          role="status"
-        >
-          {noticeText[notice]}
+
+      {query.notice && noticeText[query.notice] ? (
+        <p className="admin-notice mt-5" role="status">
+          {noticeText[query.notice]}
         </p>
       ) : null}
-      <form
-        action={uploadMediaAction}
-        className="mt-6 grid gap-3 rounded-[var(--radius)] border border-[var(--border)] p-4 md:grid-cols-[1fr_1fr_auto]"
-      >
-        <input
-          accept="image/avif,image/gif,image/jpeg,image/png,image/webp"
-          aria-label="选择图片"
-          className="form-input py-2"
-          name="file"
-          required
-          type="file"
-        />
-        <input aria-label="替代文本" className="form-input" name="altText" placeholder="替代文本" />
-        <button className="primary-button justify-center" type="submit">
-          <ImageUp aria-hidden="true" size={17} />
-          上传
-        </button>
-      </form>
+
+      <MediaUploadForm action={uploadMediaAction} />
+
       {media.length === 0 ? (
-        <p className="py-16 text-center text-sm text-[var(--muted)]">还没有媒体文件</p>
+        <p className="admin-empty mt-6">还没有图片</p>
       ) : (
-        <ul className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {media.map((item) => (
-            <li
-              className="overflow-hidden rounded-[var(--radius)] border border-[var(--border)]"
-              key={item.id}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element -- Runtime uploads are served outside Next image optimization. */}
-              <img
-                alt={item.altText || item.originalName}
-                className="aspect-video w-full bg-[var(--surface)] object-contain"
-                src={`/media/${item.storageKey}`}
-              />
-              <div className="space-y-2 p-3">
-                <p className="truncate text-sm font-medium" title={item.originalName}>
-                  {item.originalName}
-                </p>
-                <p className="font-mono text-xs text-[var(--muted)]">
-                  {item.width}x{item.height} · {(item.byteSize / 1024).toFixed(1)} KB
-                </p>
-                <input
-                  aria-label={`${item.originalName} Markdown 地址`}
-                  className="form-input w-full font-mono text-xs"
-                  readOnly
-                  value={suggestedMediaMarkdown(item)}
+        <>
+          <ul className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {media.map((item) => (
+              <li className="admin-media-card overflow-hidden" key={item.id}>
+                <MediaPreview
+                  alt={item.altText || item.originalName}
+                  src={`/media/${item.storageKey}`}
                 />
-                <form action={deleteMediaAction}>
-                  <input name="id" type="hidden" value={item.id} />
-                  <button
-                    className="inline-flex items-center gap-1.5 text-xs text-[var(--danger)] hover:underline"
-                    type="submit"
-                  >
-                    <Trash2 aria-hidden="true" size={14} />
-                    删除
-                  </button>
-                </form>
-              </div>
-            </li>
-          ))}
-        </ul>
+                <div className="space-y-2 p-3">
+                  <div className="admin-media-name-row">
+                    <p className="truncate text-sm font-medium" title={item.originalName}>
+                      {item.originalName}
+                    </p>
+                    <form action={deleteMediaAction}>
+                      <input name="id" type="hidden" value={item.id} />
+                      <button
+                        aria-label={`删除${item.originalName}`}
+                        className="admin-media-delete"
+                        title="删除图片"
+                        type="submit"
+                      >
+                        <Trash2 aria-hidden="true" size={14} />
+                      </button>
+                    </form>
+                  </div>
+                  <p className="font-mono text-xs text-[var(--muted)]">
+                    {item.width}x{item.height} · {(item.byteSize / 1024).toFixed(1)} KB
+                  </p>
+                  <MediaAddressTabs
+                    altText={item.altText}
+                    appUrl={appUrl}
+                    originalName={item.originalName}
+                    storageKey={item.storageKey}
+                  />
+                </div>
+              </li>
+            ))}
+          </ul>
+          <PostPagination
+            basePath="/admin/media"
+            className="admin-pagination"
+            page={page}
+            totalPages={totalPages}
+          />
+        </>
       )}
     </div>
   );
