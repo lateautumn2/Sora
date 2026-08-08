@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "highlight.js/styles/github-dark.css";
+@import "./admin-ui.css";
 
 :root {
   --background: #ffffff;
@@ -1700,15 +1701,11 @@ a.sora-comment-author:hover {
 
 /* Admin Material surface system */
 :root {
-  --admin-bg: #f4f6fb;
-  --admin-panel: #ffffff;
-  --admin-border: #e3e8f0;
-  --admin-shadow: 0 16px 40px rgb(15 23 42 / 7%);
-  --admin-shadow-soft: 0 7px 22px rgb(15 23 42 / 6%);
-  --admin-radius: 16px;
-  --admin-accent: #6750a4;
-  --admin-accent-hover: #4f378b;
-  --admin-accent-soft: #eee8ff;
+  --admin-panel: var(--admin-surface);
+  --admin-shadow: var(--admin-shadow-surface);
+  --admin-shadow-soft: var(--admin-shadow-surface);
+  --admin-radius: var(--admin-radius-surface);
+  --admin-accent-soft: var(--admin-surface-muted);
 }
 
 .admin-shell {

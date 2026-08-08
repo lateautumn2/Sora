@@ -1,0 +1,116 @@
+:root {
+  --admin-accent: #82045b;
+  --admin-accent-hover: #6f034d;
+  --admin-bg: #f4f4f6;
+  --admin-surface: #ffffff;
+  --admin-surface-muted: #f8f8fa;
+  --admin-sidebar: #151518;
+  --admin-text: #19191d;
+  --admin-muted: #6f6f77;
+  --admin-border: #d9d9de;
+  --admin-danger: #b42318;
+  --admin-radius-control: 6px;
+  --admin-radius-surface: 8px;
+  --admin-shadow-surface: 0 4px 14px rgb(18 18 20 / 8%);
+  --admin-shadow-popover: 0 12px 30px rgb(18 18 20 / 16%);
+  --admin-shadow-dialog: 0 24px 60px rgb(18 18 20 / 24%);
+}
+
+.ui-button,
+.ui-icon-button {
+  border: 1px solid transparent;
+  font: inherit;
+  letter-spacing: 0;
+}
+
+.ui-button {
+  display: inline-flex;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: var(--admin-radius-control);
+  background: var(--admin-accent);
+  padding: 0.5rem 1rem;
+  color: #ffffff;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.ui-button:hover:not(:disabled) {
+  background: var(--admin-accent-hover);
+}
+
+.ui-button:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+.ui-icon-button {
+  display: inline-grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border-radius: var(--admin-radius-control);
+  background: transparent;
+  color: var(--admin-muted);
+}
+
+.ui-icon-button:hover:not(:disabled) {
+  background: var(--admin-surface-muted);
+  color: var(--admin-text);
+}
+
+.ui-input,
+.ui-textarea {
+  width: 100%;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius-control);
+  background: var(--admin-surface);
+  color: var(--admin-text);
+  outline: none;
+}
+
+.ui-input {
+  min-height: 2.5rem;
+  padding: 0 0.75rem;
+}
+
+.ui-textarea {
+  min-height: 6rem;
+  resize: vertical;
+  padding: 0.75rem;
+  line-height: 1.6;
+}
+
+.ui-input:focus,
+.ui-textarea:focus {
+  border-color: var(--admin-accent);
+  box-shadow: 0 0 0 3px rgb(130 4 91 / 14%);
+}
+
+.ui-field {
+  display: grid;
+  min-width: 0;
+  gap: 0.4rem;
+}
+
+.ui-field-label {
+  color: var(--admin-text);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.ui-field-description {
+  margin: 0;
+  color: var(--admin-muted);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.ui-form-message {
+  margin: 0;
+  color: var(--admin-danger);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
