@@ -1,6 +1,9 @@
 import { z } from "zod";
 
 const websiteUrlSchema = z.string().trim().url("网址格式不正确").refine((value) => {
+  if (!URL.canParse(value)) {
+    return false;
+  }
   const protocol = new URL(value).protocol;
   return protocol === "http:" || protocol === "https:";
 }, "网址仅支持 HTTP 或 HTTPS");

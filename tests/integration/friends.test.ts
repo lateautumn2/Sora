@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { z } from "zod";
 
 import {
   countFriendLinks,
@@ -119,5 +120,18 @@ describe("friend links service", () => {
         enabled: true,
       }),
     ).toThrow();
+  });
+
+  it("reports malformed website URLs as Zod validation failures", () => {
+    expect(() =>
+      saveFriendLink({
+        name: "Malformed URL",
+        url: "not-a-url",
+        logoUrl: "",
+        description: "",
+        sortOrder: 0,
+        enabled: true,
+      }),
+    ).toThrow(z.ZodError);
   });
 });
