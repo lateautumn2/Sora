@@ -68,8 +68,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const context = useMemo<ToastContextValue>(
     () => ({
       toast(options) {
-        nextToastId.current += 1;
-        setToasts((currentToasts) => [...currentToasts, { ...options, id: nextToastId.current }]);
+        const id = ++nextToastId.current;
+        setToasts((currentToasts) => [...currentToasts, { ...options, id }]);
       },
     }),
     [],

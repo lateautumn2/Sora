@@ -1,22 +1,51 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Dialog } from "@/components/ui/dialog";
 import { ToastProvider, useToast } from "@/components/ui/toast";
 
+const deferredState = vi.hoisted(() => ({
+  enabled: false,
+  updates: [] as Array<() => void>,
+}));
+
+vi.mock("react", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react")>();
+
+  return {
+    ...actual,
+    useState<T>(initialState: T | (() => T)) {
+      const [state, setState] = actual.useState(initialState);
+
+      function setDeferredState(update: React.SetStateAction<T>) {
+        if (deferredState.enabled && typeof update === "function") {
+          deferredState.updates.push(() => setState(update));
+          return;
+        }
+
+        setState(update);
+      }
+
+      return [state, setDeferredState] as const;
+    },
+  };
+});
+
 afterEach(cleanup);
 
-function ToastActions() {
+function DeferredToastActions() {
   const { toast } = useToast();
 
   return (
     <button
       onClick={() => {
-        toast({ title: "First notification" });
-        toast({ title: "Second notification" });
+        setTimeout(() => {
+          toast({ title: "First notification" });
+          toast({ title: "Second notification" });
+        }, 0);
       }}
       type="button"
     >
@@ -58,23 +87,29 @@ describe("admin overlays", () => {
     }
   });
 
-  test("closing one of two simultaneous toasts preserves the other", () => {
-    const now = vi.spyOn(Date, "now").mockReturnValue(1);
+  test("deferred toast state updaters retain independent IDs when one notification closes", () => {
+    vi.useFakeTimers();
+    deferredState.enabled = true;
 
     try {
       render(
         <ToastProvider>
-          <ToastActions />
+          <DeferredToastActions />
         </ToastProvider>,
       );
 
       fireEvent.click(screen.getByRole("button", { name: "Show notifications" }));
+      act(() => vi.runAllTimers());
+      act(() => deferredState.updates.splice(0).forEach((update) => update()));
       fireEvent.click(screen.getAllByRole("button", { name: "关闭通知" })[0]!);
+      act(() => deferredState.updates.splice(0).forEach((update) => update()));
 
       expect(screen.queryByText("First notification")).not.toBeInTheDocument();
       expect(screen.getByText("Second notification")).toBeInTheDocument();
     } finally {
-      now.mockRestore();
+      deferredState.enabled = false;
+      deferredState.updates.length = 0;
+      vi.useRealTimers();
     }
   });
 });
