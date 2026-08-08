@@ -4,6 +4,11 @@ import { LoaderCircle } from "lucide-react";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 
+import { Button } from "@/components/ui/button";
+import { Field } from "@/components/ui/field";
+import { FormMessage } from "@/components/ui/form-message";
+import { Input } from "@/components/ui/input";
+
 import { setupAdminAction, type SetupActionState } from "./actions";
 
 const initialState: SetupActionState = {};
@@ -12,14 +17,10 @@ function SubmitButton() {
   const { pending } = useFormStatus();
 
   return (
-    <button
-      className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-[var(--radius)] bg-[var(--primary)] px-4 text-sm font-medium text-white hover:bg-[var(--primary-hover)] disabled:cursor-not-allowed disabled:opacity-60"
-      disabled={pending}
-      type="submit"
-    >
+    <Button className="ui-button-primary w-full" loading={pending} type="submit">
       {pending ? <LoaderCircle aria-hidden="true" className="animate-spin" size={17} /> : null}
       {pending ? "正在初始化" : "创建管理员"}
-    </button>
+    </Button>
   );
 }
 
@@ -31,25 +32,11 @@ interface FieldProps {
   type?: "text" | "email" | "password";
 }
 
-function Field({ autoComplete, error, label, name, type = "text" }: FieldProps) {
+function SetupField({ autoComplete, error, label, name, type = "text" }: FieldProps) {
   return (
-    <label className="grid gap-1.5 text-sm">
-      <span className="font-medium">{label}</span>
-      <input
-        aria-describedby={error ? `${name}-error` : undefined}
-        aria-invalid={Boolean(error)}
-        autoComplete={autoComplete}
-        className="h-11 rounded-[var(--radius)] border border-[var(--border)] px-3 outline-none focus:border-[var(--primary)]"
-        name={name}
-        required
-        type={type}
-      />
-      {error ? (
-        <span className="text-xs text-[var(--danger)]" id={`${name}-error`}>
-          {error}
-        </span>
-      ) : null}
-    </label>
+    <Field error={error} label={label}>
+      <Input autoComplete={autoComplete} name={name} required type={type} />
+    </Field>
   );
 }
 
@@ -58,30 +45,23 @@ export function SetupForm() {
 
   return (
     <form action={action} className="mt-7 grid gap-4">
-      {state.error ? (
-        <p
-          className="rounded-[var(--radius)] border border-red-200 bg-red-50 px-3 py-2 text-sm text-[var(--danger)]"
-          role="alert"
-        >
-          {state.error}
-        </p>
-      ) : null}
-      <Field autoComplete="name" error={state.fields?.name} label="显示名称" name="name" />
-      <Field
+      {state.error ? <FormMessage className="auth-form-error">{state.error}</FormMessage> : null}
+      <SetupField autoComplete="name" error={state.fields?.name} label="显示名称" name="name" />
+      <SetupField
         autoComplete="email"
         error={state.fields?.email}
         label="邮箱"
         name="email"
         type="email"
       />
-      <Field
+      <SetupField
         autoComplete="new-password"
         error={state.fields?.password}
         label="密码"
         name="password"
         type="password"
       />
-      <Field
+      <SetupField
         autoComplete="new-password"
         error={state.fields?.confirmPassword}
         label="确认密码"

@@ -3,6 +3,9 @@ import Link from "next/link";
 
 import { AdminMobileNavigation } from "@/components/admin/admin-mobile-navigation";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
+import { IconButton } from "@/components/ui/button";
+import { Tooltip } from "@/components/ui/tooltip";
+import { UIProvider } from "@/components/ui/ui-provider";
 import { requireAdminSession } from "@/lib/auth/admin";
 
 import { signOutAction } from "./actions";
@@ -18,33 +21,40 @@ export default async function AdminLayout({ children }: Readonly<{ children: Rea
   const session = await requireAdminSession();
 
   return (
-    <div className="admin-shell flex min-h-screen">
-      <AdminSidebar />
-      <div className="admin-workspace min-w-0 flex-1">
-        <header className="admin-topbar relative flex items-center justify-between px-4 md:px-6">
-          <AdminMobileNavigation />
-          <span className="ml-2 font-medium lg:hidden">Sora 管理</span>
-          <span className="ml-auto hidden text-sm text-[var(--muted)] sm:inline">
-            {session.user.name}
-          </span>
-          <Link className="ml-4 text-sm text-[var(--muted)] hover:text-[var(--primary)]" href="/">
-            查看站点
-          </Link>
-          <form action={signOutAction} className="ml-2">
-            <button
-              aria-label="退出登录"
-              className="grid size-9 place-items-center rounded-[var(--radius)] text-[var(--muted)] hover:bg-[var(--surface)] hover:text-[var(--text)]"
-              title="退出登录"
-              type="submit"
-            >
-              <LogOut aria-hidden="true" size={17} />
-            </button>
-          </form>
-        </header>
-        <main className="admin-main" id="main-content">
-          {children}
-        </main>
+    <UIProvider>
+      <div className="admin-shell-layout">
+        <AdminSidebar />
+        <div className="admin-shell-workspace">
+          <header className="admin-shell-topbar">
+            <div className="admin-shell-context">
+              <div className="lg:hidden">
+                <AdminMobileNavigation />
+              </div>
+              <nav aria-label="面包屑" className="admin-breadcrumb">
+                <Link href="/admin">管理后台</Link>
+                <span aria-hidden="true">/</span>
+                <span>工作区</span>
+              </nav>
+            </div>
+            <div className="admin-shell-account">
+              <span className="admin-shell-user">{session.user.name}</span>
+              <Link className="admin-shell-site-link" href="/">
+                查看站点
+              </Link>
+              <form action={signOutAction}>
+                <Tooltip content="退出登录">
+                  <IconButton aria-label="退出登录" type="submit">
+                    <LogOut aria-hidden="true" size={17} />
+                  </IconButton>
+                </Tooltip>
+              </form>
+            </div>
+          </header>
+          <main className="admin-shell-main" id="main-content">
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </UIProvider>
   );
 }

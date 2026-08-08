@@ -513,3 +513,334 @@
     min-height: 2.75rem;
   }
 }
+
+/* Task 3 shell and page composition use distinct class names to isolate them from legacy screens. */
+.admin-shell-layout {
+  display: flex;
+  min-height: 100vh;
+  background: var(--admin-bg);
+  color: var(--admin-text);
+}
+
+.admin-sidebar-shell {
+  width: 16rem;
+  flex: 0 0 16rem;
+  background: #151518;
+}
+
+.admin-sidebar-shell-panel {
+  position: sticky;
+  top: 0;
+  display: grid;
+  min-height: 100vh;
+  align-content: start;
+  padding: 1.25rem 0.75rem;
+}
+
+.admin-shell-brand {
+  display: flex;
+  min-height: 2.5rem;
+  align-items: center;
+  border-radius: var(--admin-radius-control);
+  padding: 0 0.75rem;
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.admin-shell-navigation,
+.admin-mobile-navigation-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.admin-shell-navigation {
+  margin-top: 1.5rem;
+}
+
+.admin-navigation-group {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.admin-navigation-group h2 {
+  margin: 0;
+  padding: 0 0.75rem;
+  color: #a7a7af;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.admin-navigation-group > div {
+  display: grid;
+  gap: 0.125rem;
+}
+
+.admin-shell-nav-link,
+.admin-mobile-navigation-link {
+  display: flex;
+  min-height: 2.5rem;
+  align-items: center;
+  gap: 0.625rem;
+  border-radius: var(--admin-radius-control);
+  padding: 0 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.admin-shell-nav-link {
+  color: #d7d7dc;
+}
+
+.admin-shell-nav-link:hover {
+  background: #27272c;
+  color: #ffffff;
+}
+
+.admin-shell-nav-link.is-active,
+.admin-mobile-navigation-link.is-active {
+  background: #82045b;
+  color: #ffffff;
+}
+
+.admin-shell-workspace {
+  min-width: 0;
+  flex: 1;
+}
+
+.admin-shell-topbar {
+  display: flex;
+  min-height: 4rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--admin-border);
+  background: var(--admin-surface);
+  padding: 0 1.5rem;
+}
+
+.admin-shell-context,
+.admin-shell-account,
+.admin-breadcrumb {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.admin-breadcrumb {
+  color: var(--admin-muted);
+  font-size: 0.875rem;
+}
+
+.admin-breadcrumb a,
+.admin-shell-site-link {
+  color: var(--admin-text);
+  font-weight: 600;
+}
+
+.admin-breadcrumb a:hover,
+.admin-shell-site-link:hover {
+  color: #82045b;
+}
+
+.admin-shell-account {
+  flex: 0 0 auto;
+}
+
+.admin-shell-user {
+  overflow: hidden;
+  max-width: 12rem;
+  color: var(--admin-muted);
+  font-size: 0.875rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-shell-site-link {
+  font-size: 0.875rem;
+}
+
+.admin-shell-main {
+  width: min(100%, 84rem);
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.admin-mobile-navigation-dialog {
+  top: 1rem;
+  left: 1rem;
+  width: calc(100vw - 2rem);
+  max-width: 28rem;
+  max-height: calc(100vh - 2rem);
+  transform: none;
+  padding: 1rem;
+}
+
+.admin-mobile-navigation-header {
+  display: flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--admin-border);
+  padding-bottom: 0.75rem;
+}
+
+.admin-mobile-navigation-title {
+  margin: 0;
+  color: var(--admin-text);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.admin-mobile-navigation-list {
+  margin-top: 1rem;
+}
+
+.admin-mobile-navigation-link {
+  color: var(--admin-text);
+}
+
+.admin-mobile-navigation-link:hover {
+  background: var(--admin-surface-muted);
+}
+
+.admin-page-template {
+  display: grid;
+  min-width: 0;
+  gap: 1.5rem;
+}
+
+.admin-page-template-header {
+  display: flex;
+  min-height: 6.5rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.admin-page-template-heading h1,
+.admin-empty-state h2 {
+  margin: 0;
+  color: var(--admin-text);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.admin-page-template-heading p,
+.admin-empty-state p {
+  margin: 0.5rem 0 0;
+  color: var(--admin-muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.admin-page-template-actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.admin-toolbar {
+  display: flex;
+  min-height: 2.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.admin-surface {
+  min-width: 0;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius-surface);
+  background: var(--admin-surface);
+  padding: 1.25rem;
+  box-shadow: var(--admin-shadow-surface);
+}
+
+.admin-empty-state {
+  min-width: 0;
+  border: 1px dashed var(--admin-border);
+  border-radius: var(--admin-radius-surface);
+  background: var(--admin-surface-muted);
+  padding: 3rem 1.25rem;
+  text-align: center;
+}
+
+.admin-empty-state-action {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.auth-shell {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  background: var(--admin-bg);
+  padding: 2.5rem 1.25rem;
+}
+
+.auth-shell-surface {
+  width: min(100%, 28rem);
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius-surface);
+  background: var(--admin-surface);
+  padding: 2rem;
+  box-shadow: var(--admin-shadow-surface);
+}
+
+.auth-shell-brand {
+  color: var(--admin-text);
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.auth-shell-surface h1 {
+  margin: 2rem 0 0;
+  color: var(--admin-text);
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.auth-shell-description {
+  margin: 0.5rem 0 0;
+  color: var(--admin-muted);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.auth-form-error {
+  border: 1px solid var(--admin-danger);
+  border-radius: var(--admin-radius-control);
+  background: #fff5f5;
+  padding: 0.625rem 0.75rem;
+}
+
+@media (max-width: 40rem) {
+  .admin-shell-topbar {
+    padding: 0 1rem;
+  }
+
+  .admin-breadcrumb span:last-child,
+  .admin-shell-user {
+    display: none;
+  }
+
+  .admin-shell-main {
+    padding: 1rem;
+  }
+
+  .admin-page-template-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-surface,
+  .auth-shell-surface {
+    padding: 1rem;
+  }
+}
