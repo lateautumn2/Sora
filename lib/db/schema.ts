@@ -380,6 +380,27 @@ export const settings = sqliteTable("settings", {
   updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(currentTimestamp),
 });
 
+export const friendLinks = sqliteTable(
+  "friend_links",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    url: text("url").notNull(),
+    logoUrl: text("logo_url"),
+    description: text("description").notNull().default(""),
+    sortOrder: integer("sort_order").notNull().default(0),
+    enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(currentTimestamp),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(currentTimestamp),
+  },
+  (table) => [
+    uniqueIndex("friend_links_url_unique").on(table.url),
+    index("friend_links_public_sort_idx").on(table.enabled, table.sortOrder, table.name),
+    check("friend_links_sort_order_check", sql`${table.sortOrder} BETWEEN 0 AND 999`),
+    check("friend_links_enabled_check", sql`${table.enabled} IN (0, 1)`),
+  ],
+);
+
 export const postUpvotes = sqliteTable(
   "post_upvotes",
   {
@@ -415,3 +436,4 @@ export type AuthUser = typeof authUsers.$inferSelect;
 export type Post = typeof posts.$inferSelect;
 export type NewPost = typeof posts.$inferInsert;
 export type Comment = typeof comments.$inferSelect;
+export type FriendLinkRow = typeof friendLinks.$inferSelect;
