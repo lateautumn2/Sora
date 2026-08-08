@@ -3,6 +3,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createRef } from "react";
+import { chromium } from "@playwright/test";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
@@ -84,6 +85,47 @@ describe("admin shell UI", () => {
     expect(mobileNavigationStyles).toMatch(
       /\.admin-mobile-navigation-trigger,\s*\.admin-mobile-navigation-header \.ui-icon-button,\s*\.admin-mobile-navigation-link\s*\{[^}]*min-width: 2\.75rem;[^}]*min-height: 2\.75rem;/s,
     );
+  });
+
+  test("computes 44px mobile navigation targets at each active viewport", async () => {
+    const adminUiStyles = readFileSync(join(process.cwd(), "app", "admin-ui.css"), "utf8");
+    const browser = await chromium.launch({ channel: "chrome", headless: true });
+
+    try {
+      const page = await browser.newPage();
+
+      for (const width of [390, 800, 1023]) {
+        await page.setViewportSize({ width, height: 800 });
+        await page.setContent(`
+          <style>${adminUiStyles}</style>
+          <button class="ui-icon-button admin-mobile-navigation-trigger admin-mobile-trigger">Menu</button>
+          <div class="admin-mobile-navigation-header">
+            <button class="ui-icon-button admin-mobile-close">Close</button>
+          </div>
+          <a class="admin-mobile-navigation-link admin-mobile-link" href="#content">Content</a>
+        `);
+
+        const dimensions = await page
+          .locator(".admin-mobile-trigger, .admin-mobile-close, .admin-mobile-link")
+          .evaluateAll((elements) =>
+            elements.map((element) => {
+              const style = getComputedStyle(element);
+              return {
+                height: Number.parseFloat(style.height),
+                minHeight: Number.parseFloat(style.minHeight),
+              };
+            }),
+          );
+
+        expect(dimensions).toHaveLength(3);
+        for (const target of dimensions) {
+          expect(target.minHeight).toBeGreaterThanOrEqual(44);
+          expect(target.height).toBeGreaterThanOrEqual(44);
+        }
+      }
+    } finally {
+      await browser.close();
+    }
   });
 
   test("page composition components forward refs and native props while retaining header children", () => {
