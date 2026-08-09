@@ -13,6 +13,9 @@ docs
 daily.md
 AGENTS.md
 node_modules
+tests
+playwright.config.ts
+vitest.config.ts
 playwright-report
 test-results
 tools

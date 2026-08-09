@@ -1,53 +1,63 @@
-name: Publish image
+name: Build and publish Docker image
 
 on:
   push:
-    tags: ["*"]
+    tags:
+      - "*"
   workflow_dispatch:
     inputs:
       image_tag:
-        description: Image tag used for a manual build
-        required: false
+        description: Tag assigned to a manually built image
+        required: true
         default: manual
         type: string
 
 permissions:
   contents: read
   packages: write
-  id-token: write
 
 concurrency:
-  group: image-${{ github.ref }}-${{ inputs.image_tag || 'tag' }}
+  group: docker-image-${{ github.ref }}-${{ inputs.image_tag || 'tag' }}
   cancel-in-progress: false
 
 env:
   IMAGE_NAME: ghcr.io/lateautumn2/sora
 
 jobs:
-  publish:
+  build-and-push:
+    name: Build and push
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Sign in to GitHub Container Registry
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - id: meta
+
+      - name: Generate image metadata
+        id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
             type=ref,event=tag
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
             type=raw,value=${{ inputs.image_tag || 'manual' }},enable=${{ github.event_name == 'workflow_dispatch' }}
-            type=raw,value=latest,enable=${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
+            type=raw,value=latest,enable=${{ github.event_name == 'push' }}
             type=sha
-      - uses: docker/build-push-action@v6
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
         with:
           context: .
           platforms: linux/amd64,linux/arm64

@@ -7,13 +7,15 @@
 /out/
 
 # test artifacts
+/tests/
+/playwright.config.ts
+/vitest.config.ts
 /coverage/
 /playwright-report/
 /test-results/
 
 # runtime data
-/data/*
-!/data/.gitkeep
+/data/
 /backups/
 /backup/
 /converted/

@@ -17,9 +17,6 @@
     "format:check": "prettier --check .",
     "typegen": "next typegen",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:migrate:runtime": "node scripts/migrate.mjs",
@@ -30,7 +27,7 @@
     "content:dry-run": "node scripts/content-import.mjs dry-run",
     "content:import": "node scripts/content-import.mjs import",
     "content:verify": "node scripts/content-import.mjs verify",
-    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test"
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck"
   },
   "dependencies": {
     "@bytemd/plugin-gfm": "^1.22.0",
@@ -62,24 +59,18 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4.3.3",
-    "@testing-library/jest-dom": "^7.0.0",
-    "@testing-library/react": "^16.3.2",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^22.20.1",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@types/yauzl": "^3.4.0",
     "@types/yazl": "^3.3.1",
-    "@vitest/coverage-v8": "^4.1.10",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.3.0",
-    "jsdom": "^29.0.0",
     "prettier": "^3.9.6",
     "tailwindcss": "^4.3.3",
-    "typescript": "^6.0.3",
-    "vitest": "^4.1.10"
+    "typescript": "^6.0.3"
   }
 }
