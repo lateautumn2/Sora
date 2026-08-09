@@ -1,9 +1,9 @@
-import { Search } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 
 import { MobileNavigation } from "@/components/site/mobile-navigation";
 import { resolveSiteNavigation } from "@/components/site/site-navigation";
+import { SiteSearch } from "@/components/site/site-search";
 import { getSiteSettings, listPrimaryMenuItems } from "@/lib/content/service";
 
 export function SiteHeader() {
@@ -28,9 +28,7 @@ export function SiteHeader() {
           ))}
         </nav>
         <div className="sora-header-actions">
-          <Link aria-label="搜索" className="sora-icon-link" href="/search" title="搜索">
-            <Search aria-hidden="true" size={17} strokeWidth={2.25} />
-          </Link>
+          <SiteSearch variant="header" />
           <MobileNavigation navigation={navigation.map(({ href, label }) => ({ href, label }))} />
         </div>
       </div>

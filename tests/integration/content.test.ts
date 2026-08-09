@@ -23,12 +23,23 @@ import {
   replyToComment,
   setCommentStatus,
 } from "@/lib/comments/service";
+import type { CommentRequestContext } from "@/lib/comments/request-context";
 import { getDatabaseConnection, resetDatabaseConnectionForTests } from "@/lib/db/client";
 import { resetEnvironmentForTests } from "@/lib/env";
 import { registerView, toggleUpvote } from "@/lib/interactions/service";
 
 let directory: string;
 let previousDatabasePath: string | undefined;
+
+function commentRequestContext(userAgentSummary = "test-agent"): CommentRequestContext {
+  return {
+    ipAddress: null,
+    ipCity: null,
+    userAgentSummary,
+    browserName: null,
+    browserVersion: null,
+  };
+}
 
 beforeEach(() => {
   directory = mkdtempSync(join(tmpdir(), "sora-blog-content-"));
@@ -83,6 +94,24 @@ describe("content service", () => {
     expect(post?.tags[0]?.name).toBe("SQLite");
     expect(listCategories()[0]?.count).toBe(1);
     expect(searchPublishedPosts("marker")[0]?.id).toBe(postId);
+    expect(searchPublishedPosts("mark")[0]?.id).toBe(postId);
+    expect(searchPublishedPosts("内容测")[0]?.id).toBe(postId);
+    expect(searchPublishedPosts("SQLite 内容测试")[0]?.id).toBe(postId);
+
+    const draftId = saveContent({
+      kind: "POST",
+      title: "内容测试草稿",
+      slug: "content-search-draft",
+      sourceContent: "SQLite search marker draft",
+      sourceFormat: "MARKDOWN",
+      status: "DRAFT",
+      visibility: "PUBLIC",
+      allowComment: true,
+      pinned: false,
+      categoryIds: [],
+      tagIds: [],
+    });
+    expect(searchPublishedPosts("内容测").map((result) => result.id)).not.toContain(draftId);
 
     const revision = getDatabaseConnection()
       .sqlite.prepare("SELECT COUNT(*) AS count FROM post_revisions WHERE post_id = ?")
@@ -118,7 +147,7 @@ describe("content service", () => {
       postId,
       { ...baseInput, requestToken: randomUUID() },
       "visitor-settings",
-      "test-agent",
+      commentRequestContext(),
     );
     expect(published.status).toBe("APPROVED");
 
@@ -128,9 +157,73 @@ describe("content service", () => {
         postId,
         { ...baseInput, requestToken: randomUUID(), content: "关闭后的评论" },
         "visitor-settings-closed",
-        "test-agent",
+        commentRequestContext(),
       ),
     ).toThrowError(new InteractionError("COMMENTS_CLOSED"));
+  });
+
+  it("stores comment request context without exposing private fields publicly", () => {
+    const postId = saveContent({
+      kind: "POST",
+      title: "评论环境信息",
+      slug: "comment-request-context",
+      sourceContent: "正文",
+      sourceFormat: "MARKDOWN",
+      status: "PUBLISHED",
+      visibility: "PUBLIC",
+      allowComment: true,
+      pinned: false,
+      categoryIds: [],
+      tagIds: [],
+    });
+    saveSiteSettings({ ...getSiteSettings(), requireCommentModeration: false });
+
+    const result = createPublicComment(
+      postId,
+      {
+        authorName: "访客",
+        authorEmail: "reader@example.com",
+        authorWebsite: "https://example.com",
+        content: "携带环境信息的评论",
+        parentId: null,
+        requestToken: randomUUID(),
+        company: "",
+      },
+      "visitor-context",
+      {
+        ipAddress: "203.0.113.8",
+        ipCity: "杭州",
+        userAgentSummary: "Mozilla/5.0 Chrome/139.0.0.0",
+        browserName: "Chrome",
+        browserVersion: "139.0.0.0",
+      },
+    );
+
+    expect(result.comment).toMatchObject({
+      id: result.id,
+      avatarHash: "baa0f4114eafbdd39ce828d01b849ae6",
+      browserName: "Chrome",
+      browserVersion: "139.0.0.0",
+      ipCity: "杭州",
+    });
+    expect(result.comment).not.toHaveProperty("authorEmail");
+    expect(result.comment).not.toHaveProperty("ipAddress");
+    expect(listPublicComments(postId)).toEqual([result.comment]);
+
+    expect(
+      getDatabaseConnection()
+        .sqlite.prepare(
+          `SELECT ip_address AS ipAddress, ip_city AS ipCity,
+                  browser_name AS browserName, browser_version AS browserVersion
+           FROM comments WHERE id = ?`,
+        )
+        .get(result.id),
+    ).toEqual({
+      ipAddress: "203.0.113.8",
+      ipCity: "杭州",
+      browserName: "Chrome",
+      browserVersion: "139.0.0.0",
+    });
   });
 
   it("does not persist post taxonomy for page content", () => {
@@ -186,8 +279,8 @@ describe("content service", () => {
       requestToken,
       company: "",
     };
-    const first = createPublicComment(postId, input, "visitor-a", "test-agent");
-    const duplicate = createPublicComment(postId, input, "visitor-a", "test-agent");
+    const first = createPublicComment(postId, input, "visitor-a", commentRequestContext());
+    const duplicate = createPublicComment(postId, input, "visitor-a", commentRequestContext());
     expect(first.status).toBe("PENDING");
     expect(duplicate).toMatchObject({ id: first.id, duplicate: true });
     expect(listPublicComments(postId)).toHaveLength(0);
@@ -207,7 +300,7 @@ describe("content service", () => {
         postId,
         { ...input, content: `评论 ${index}`, requestToken: randomUUID() },
         "visitor-a",
-        "test-agent",
+        commentRequestContext(),
       );
     }
     expect(() =>
@@ -215,7 +308,7 @@ describe("content service", () => {
         postId,
         { ...input, requestToken: randomUUID() },
         "visitor-a",
-        "test-agent",
+        commentRequestContext(),
       ),
     ).toThrowError(new InteractionError("RATE_LIMITED"));
 

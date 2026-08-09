@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { describe, expect, test, vi } from "vitest";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { FriendManager } from "@/components/admin/friend-manager";
 import { MenuManager } from "@/components/admin/menu-manager";
@@ -25,6 +25,8 @@ vi.mock("@/app/(admin)/admin/friends/actions", () => ({
   deleteFriendLinkAction: vi.fn(),
   saveFriendLinkAction: vi.fn(),
 }));
+
+afterEach(cleanup);
 
 const taxonomyProps = {
   basePath: "/admin/categories",
@@ -88,6 +90,30 @@ describe("admin record managers", () => {
     fireEvent.click(screen.getByRole("button", { name: "关闭" }));
     fireEvent.click(screen.getByRole("button", { name: "编辑 关于" }));
     expect(screen.getByRole("switch", { name: "启用 关于" })).toBeChecked();
+  });
+
+  test("uses a dedicated four-part layout for friend records", () => {
+    const { container } = render(
+      <FriendManager
+        friends={[
+          {
+            description: "设计与开发",
+            enabled: true,
+            id: "00000000-0000-4000-8000-000000000001",
+            logoUrl: "",
+            name: "Friend 1",
+            sortOrder: 0,
+            url: "https://friend.example.com",
+          },
+        ]}
+        page={1}
+        totalPages={1}
+      />,
+    );
+
+    const record = container.querySelector("article");
+    expect(record).toHaveClass("admin-record-row", "admin-friend-record-row");
+    expect(record?.children).toHaveLength(4);
   });
 
   test("friend dialogs reset unsubmitted create and edit values after reopening", () => {

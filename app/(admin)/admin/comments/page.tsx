@@ -1,14 +1,17 @@
 import Link from "next/link";
 
-import { changeCommentStatusAction, replyCommentAction } from "@/app/(admin)/admin/comments/actions";
+import {
+  changeCommentStatusAction,
+  replyCommentAction,
+} from "@/app/(admin)/admin/comments/actions";
 import { AdminPage, AdminPageHeader } from "@/components/admin/admin-page";
 import { AdminSurface } from "@/components/admin/admin-surface";
 import { AdminTabs } from "@/components/admin/admin-tabs";
 import { AdminToolbar } from "@/components/admin/admin-toolbar";
+import { CommentReplyForm } from "@/components/admin/comment-reply-form";
 import { CommentAvatar } from "@/components/comment-avatar";
+import { CommentEnvironment } from "@/components/comment-environment";
 import { Button } from "@/components/ui/button";
-import { Field } from "@/components/ui/field";
-import { Textarea } from "@/components/ui/textarea";
 import { Tooltip } from "@/components/ui/tooltip";
 import { PostPagination } from "@/components/site/post-pagination";
 import {
@@ -123,7 +126,7 @@ export default async function AdminCommentsPage({
 function AdminCommentRow({ comment }: { comment: AdminComment }) {
   return (
     <article className="admin-comment-row">
-      <CommentAvatar name={comment.authorName} size={40} />
+      <CommentAvatar avatarHash={comment.avatarHash} name={comment.authorName} size={40} />
       <div className="admin-comment-copy">
         <div className="admin-comment-byline">
           <strong>{comment.authorName}</strong>
@@ -133,6 +136,12 @@ function AdminCommentRow({ comment }: { comment: AdminComment }) {
           <time dateTime={new Date(comment.createdAt).toISOString()}>
             {new Date(comment.createdAt).toLocaleString("zh-CN")}
           </time>
+          <CommentEnvironment
+            browserName={comment.browserName}
+            browserVersion={comment.browserVersion}
+            className="admin-comment-environment"
+            ipCity={comment.ipCity}
+          />
         </div>
         <p className="admin-comment-email">{comment.authorEmail}</p>
         <div
@@ -151,21 +160,12 @@ function AdminCommentRow({ comment }: { comment: AdminComment }) {
           ) : (
             <StatusButton id={comment.id} label="恢复待审核" status="PENDING" />
           )}
+          <CommentReplyForm
+            action={replyCommentAction}
+            authorName={comment.authorName}
+            parentId={comment.id}
+          />
         </div>
-        <form action={replyCommentAction} className="admin-comment-reply">
-          <input name="parentId" type="hidden" value={comment.id} />
-          <Field label={`回复 ${comment.authorName}`}>
-            <Textarea
-              aria-label={`回复 ${comment.authorName}`}
-              maxLength={5000}
-              name="content"
-              placeholder={`以管理员身份公开回复 ${comment.authorName}`}
-              required
-              rows={3}
-            />
-          </Field>
-          <Button type="submit">回复</Button>
-        </form>
       </div>
     </article>
   );
@@ -187,7 +187,12 @@ function StatusButton({
       <input name="id" type="hidden" value={id} />
       <input name="status" type="hidden" value={status} />
       <Tooltip content={label}>
-        <Button className={danger ? "ui-button-danger ui-button-compact" : "ui-button-secondary ui-button-compact"} type="submit">
+        <Button
+          className={
+            danger ? "ui-button-danger ui-button-compact" : "ui-button-secondary ui-button-compact"
+          }
+          type="submit"
+        >
           {label}
         </Button>
       </Tooltip>

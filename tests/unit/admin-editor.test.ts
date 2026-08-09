@@ -88,14 +88,40 @@ function cssRule(selector: string) {
 }
 
 describe("admin content editor", () => {
-  test("keeps only navigation and save actions in the editor toolbar", () => {
+  test("keeps navigation, save, and trash actions in the editor toolbar", () => {
     render(createElement(ContentEditor, editorProps));
     const toolbar = document.querySelector(".content-editor-toolbar") as HTMLElement;
 
     expect(within(toolbar).getByRole("link", { name: "返回列表" })).toBeVisible();
     expect(within(toolbar).getByRole("button", { name: "保存内容" })).toBeVisible();
+    expect(within(toolbar).getByRole("button", { name: "移至回收站" })).toBeVisible();
+    expect(document.querySelector(".content-editor-trash")).not.toBeInTheDocument();
     expect(within(toolbar).queryByText("编辑文章")).not.toBeInTheDocument();
     expect(within(toolbar).queryByText(editorProps.content.title)).not.toBeInTheDocument();
+  });
+
+  test("does not show the trash action for new content", () => {
+    render(createElement(ContentEditor, { ...editorProps, content: undefined }));
+
+    expect(screen.queryByRole("button", { name: "移至回收站" })).not.toBeInTheDocument();
+  });
+
+  test("keeps SEO settings collapsed by default without dropping form fields", () => {
+    render(createElement(ContentEditor, editorProps));
+
+    const summary = screen.getByText("SEO 设置");
+    const details = summary.closest("details");
+    expect(details).not.toBeNull();
+    expect(details).not.toHaveAttribute("open");
+
+    const form = document.getElementById("content-editor-form") as HTMLFormElement;
+    const collapsedData = new FormData(form);
+    expect(collapsedData.getAll("seoTitle")).toEqual([""]);
+    expect(collapsedData.getAll("seoDescription")).toEqual([""]);
+    expect(collapsedData.getAll("canonicalUrl")).toEqual([""]);
+
+    fireEvent.click(summary);
+    expect(details).toHaveAttribute("open");
   });
 
   test("uses the editor settings panel and accessible shared selection controls", () => {
@@ -214,7 +240,9 @@ describe("admin content editor", () => {
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
-    const formData = new FormData(document.getElementById("content-editor-form") as HTMLFormElement);
+    const formData = new FormData(
+      document.getElementById("content-editor-form") as HTMLFormElement,
+    );
 
     expect(formData.getAll("categoryIds")).toEqual([]);
     expect(formData.getAll("tagIds")).toEqual([]);

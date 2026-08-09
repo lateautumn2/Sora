@@ -198,7 +198,7 @@ export function FriendManager({ friends, notice, page, totalPages }: FriendManag
         ) : (
           <div className="admin-record-list">
             {friends.map((friend) => (
-              <article className="admin-record-row" key={friend.id}>
+              <article className="admin-record-row admin-friend-record-row" key={friend.id}>
                 <FriendLogo logoUrl={friend.logoUrl} name={friend.name} />
                 <div className="admin-record-copy">
                   <h2>{friend.name}</h2>

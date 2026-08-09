@@ -1,5 +1,6 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
+import type { CommentRequestContext } from "@/lib/comments/request-context";
 import { renderComment } from "@/lib/content/render";
 import { getSiteSettings } from "@/lib/content/service";
 import { getDatabaseConnection } from "@/lib/db/client";
@@ -14,6 +15,10 @@ export interface PublicComment {
   rootId: string | null;
   authorName: string;
   authorWebsite: string | null;
+  avatarHash: string;
+  browserName: string | null;
+  browserVersion: string | null;
+  ipCity: string | null;
   renderedHtml: string;
   createdAt: number;
 }
@@ -43,25 +48,55 @@ export class InteractionError extends Error {
   }
 }
 
-export function listPublicComments(postId: string): PublicComment[] {
-  return getDatabaseConnection()
+interface PublicCommentRow extends Omit<PublicComment, "avatarHash"> {
+  authorEmail: string;
+}
+
+function toPublicComment(row: PublicCommentRow): PublicComment {
+  const { authorEmail, ...comment } = row;
+  return {
+    ...comment,
+    avatarHash: createHash("md5").update(authorEmail.trim().toLowerCase()).digest("hex"),
+  };
+}
+
+function getPublicCommentById(id: string): PublicComment | null {
+  const row = getDatabaseConnection()
     .sqlite.prepare(
       `SELECT id, parent_id AS parentId, root_id AS rootId, author_name AS authorName,
-              author_website AS authorWebsite, rendered_html AS renderedHtml,
+              author_email AS authorEmail, author_website AS authorWebsite,
+              rendered_html AS renderedHtml, ip_city AS ipCity,
+              browser_name AS browserName, browser_version AS browserVersion,
+              created_at AS createdAt
+       FROM comments
+       WHERE id = ? AND status = 'APPROVED'`,
+    )
+    .get(id) as PublicCommentRow | undefined;
+  return row ? toPublicComment(row) : null;
+}
+
+export function listPublicComments(postId: string): PublicComment[] {
+  const rows = getDatabaseConnection()
+    .sqlite.prepare(
+      `SELECT id, parent_id AS parentId, root_id AS rootId, author_name AS authorName,
+              author_email AS authorEmail, author_website AS authorWebsite,
+              rendered_html AS renderedHtml, ip_city AS ipCity,
+              browser_name AS browserName, browser_version AS browserVersion,
               created_at AS createdAt
        FROM comments
        WHERE post_id = ? AND status = 'APPROVED'
        ORDER BY created_at`,
     )
-    .all(postId) as PublicComment[];
+    .all(postId) as PublicCommentRow[];
+  return rows.map(toPublicComment);
 }
 
 export function createPublicComment(
   postId: string,
   input: PublicCommentInput,
   visitorHash: string,
-  userAgentSummary: string | null,
-): { id: string; status: CommentStatus; duplicate: boolean } {
+  context: CommentRequestContext,
+): { id: string; status: CommentStatus; duplicate: boolean; comment: PublicComment | null } {
   const sqlite = getDatabaseConnection().sqlite;
   return sqlite.transaction(() => {
     const tokenHash = hashRequestToken(input.requestToken);
@@ -71,7 +106,13 @@ export function createPublicComment(
          JOIN comments c ON c.id = cr.comment_id WHERE cr.token_hash = ?`,
       )
       .get(tokenHash) as { id: string; status: CommentStatus } | undefined;
-    if (duplicate) return { ...duplicate, duplicate: true };
+    if (duplicate) {
+      return {
+        ...duplicate,
+        duplicate: true,
+        comment: duplicate.status === "APPROVED" ? getPublicCommentById(duplicate.id) : null,
+      };
+    }
 
     const post = sqlite
       .prepare(
@@ -121,8 +162,9 @@ export function createPublicComment(
         `INSERT INTO comments (
            id, post_id, parent_id, root_id, status, author_name, author_email,
            author_website, content, rendered_html, ip_hash, user_agent_summary,
+           ip_address, ip_city, browser_name, browser_version,
            created_at, updated_at
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         id,
@@ -136,7 +178,11 @@ export function createPublicComment(
         input.content,
         renderComment(input.content),
         visitorHash,
-        userAgentSummary,
+        context.userAgentSummary,
+        context.ipAddress,
+        context.ipCity,
+        context.browserName,
+        context.browserVersion,
         now,
         now,
       );
@@ -147,7 +193,12 @@ export function createPublicComment(
     sqlite
       .prepare("INSERT INTO comment_requests (token_hash, comment_id, created_at) VALUES (?, ?, ?)")
       .run(tokenHash, id, now);
-    return { id, status, duplicate: false };
+    return {
+      id,
+      status,
+      duplicate: false,
+      comment: status === "APPROVED" ? getPublicCommentById(id) : null,
+    };
   })();
 }
 
@@ -158,18 +209,23 @@ export function listAdminComments(
 ): AdminComment[] {
   const where = status ? "WHERE c.status = ?" : "";
   const params = status ? [status, limit, offset] : [limit, offset];
-  return getDatabaseConnection()
+  const rows = getDatabaseConnection()
     .sqlite.prepare(
       `SELECT c.id, c.post_id AS postId, p.title AS postTitle, c.parent_id AS parentId,
               c.root_id AS rootId, c.status, c.author_name AS authorName,
               c.author_email AS authorEmail, c.author_website AS authorWebsite,
-              c.content, c.rendered_html AS renderedHtml,
+              c.content, c.rendered_html AS renderedHtml, c.ip_city AS ipCity,
+              c.browser_name AS browserName, c.browser_version AS browserVersion,
               c.created_at AS createdAt
        FROM comments c JOIN posts p ON p.id = c.post_id
        ${where} ORDER BY c.created_at DESC
        LIMIT ? OFFSET ?`,
     )
-    .all(...params) as AdminComment[];
+    .all(...params) as Array<Omit<AdminComment, "avatarHash">>;
+  return rows.map((row) => ({
+    ...row,
+    avatarHash: createHash("md5").update(row.authorEmail.trim().toLowerCase()).digest("hex"),
+  }));
 }
 
 export function countAdminCommentPosts(status?: CommentStatus): number {
@@ -217,17 +273,27 @@ export function listAdminCommentPosts(
       `SELECT c.id, c.post_id AS postId, p.title AS postTitle, c.parent_id AS parentId,
               c.root_id AS rootId, c.status, c.author_name AS authorName,
               c.author_email AS authorEmail, c.author_website AS authorWebsite,
-              c.content, c.rendered_html AS renderedHtml, c.created_at AS createdAt
+              c.content, c.rendered_html AS renderedHtml, c.ip_city AS ipCity,
+              c.browser_name AS browserName, c.browser_version AS browserVersion,
+              c.created_at AS createdAt
        FROM comments c
        JOIN posts p ON p.id = c.post_id
        WHERE ${commentWhere}
        ORDER BY c.created_at DESC`,
     )
-    .all(...(status ? [...groups.map((group) => group.postId), status] : groups.map((group) => group.postId))) as AdminComment[];
+    .all(
+      ...(status
+        ? [...groups.map((group) => group.postId), status]
+        : groups.map((group) => group.postId)),
+    ) as Array<Omit<AdminComment, "avatarHash">>;
+  const hydratedComments = comments.map((comment) => ({
+    ...comment,
+    avatarHash: createHash("md5").update(comment.authorEmail.trim().toLowerCase()).digest("hex"),
+  }));
 
   return groups.map((group) => ({
     ...group,
-    comments: comments.filter((comment) => comment.postId === group.postId),
+    comments: hydratedComments.filter((comment) => comment.postId === group.postId),
   }));
 }
 

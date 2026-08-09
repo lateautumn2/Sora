@@ -1,6 +1,5 @@
 @import "tailwindcss";
 @import "highlight.js/styles/github-dark.css";
-@import "./admin-ui.css";
 
 @theme inline {
   --font-sans: var(--sora-sans);
@@ -857,6 +856,120 @@ input[type="file"].form-input:hover::file-selector-button {
   color: #ffffff;
 }
 
+.sora-home-search-trigger {
+  display: inline-grid;
+  min-width: 2.25rem;
+  min-height: 2.25rem;
+  place-items: center;
+  border-radius: 8px;
+  color: inherit;
+}
+
+.sora-home-search-trigger:hover {
+  color: var(--primary);
+}
+
+.sora-search-dialog {
+  display: grid;
+  gap: 1rem;
+}
+
+.sora-search-dialog-shell {
+  border-color: var(--border);
+  border-radius: var(--radius);
+  background: #ffffff;
+  color: var(--text);
+  box-shadow: 0 24px 60px rgb(63 46 43 / 18%);
+}
+
+.sora-search-dialog-shell .ui-dialog-title {
+  color: var(--text);
+  font-family: var(--sora-serif);
+  font-size: 1.05rem;
+}
+
+.sora-search-dialog-shell .ui-icon-button {
+  color: var(--muted);
+}
+
+.sora-search-dialog-shell .ui-icon-button:hover {
+  background: var(--surface);
+  color: var(--primary);
+}
+
+.sora-search-dialog-field {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 0.65rem 0.8rem;
+  color: var(--muted);
+}
+
+.sora-search-dialog-field:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgb(232 98 82 / 12%);
+}
+
+.sora-search-dialog-field input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  outline: none;
+}
+
+.sora-search-dialog-results {
+  min-height: 8rem;
+}
+
+.sora-search-dialog-state {
+  padding: 2.5rem 1rem;
+  color: var(--muted);
+  font-size: 0.88rem;
+  text-align: center;
+}
+
+.sora-search-dialog-list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.sora-search-dialog-item {
+  display: grid;
+  gap: 0.25rem;
+  border-radius: 10px;
+  padding: 0.75rem;
+}
+
+.sora-search-dialog-item:hover,
+.sora-search-dialog-item:focus-visible {
+  background: var(--surface);
+  outline: none;
+}
+
+.sora-search-dialog-item strong {
+  font-family: var(--sora-serif);
+  font-size: 0.95rem;
+}
+
+.sora-search-dialog-item span {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.82rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sora-search-dialog-item time {
+  color: var(--muted);
+  font-family: var(--sora-mono);
+  font-size: 0.72rem;
+}
+
 /* Reading surfaces */
 
 .sora-article,
@@ -919,9 +1032,9 @@ input[type="file"].form-input:hover::file-selector-button {
 .sora-post-toc {
   position: absolute;
   top: 0;
-  right: -10.5rem;
+  right: -12rem;
   display: none;
-  width: 8.5rem;
+  width: 10rem;
   height: 100%;
 }
 
@@ -932,12 +1045,13 @@ input[type="file"].form-input:hover::file-selector-button {
   flex-direction: column;
   border-left: 3px solid #efefef;
   font-family: var(--sora-serif);
-  font-size: 0.78rem;
+  font-size: 0.88rem;
+  line-height: 1.5;
 }
 
 .sora-post-toc a {
   overflow: hidden;
-  padding-block: 0.22rem;
+  padding-block: 0.32rem;
   color: rgb(0 0 0 / 62%);
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1185,6 +1299,37 @@ a.sora-comment-author:hover {
   padding-left: 1rem;
 }
 
+.comment-avatar-image {
+  display: block;
+  aspect-ratio: 1;
+  overflow: hidden;
+  object-fit: cover;
+}
+
+.sora-comment-environment {
+  display: inline-flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  overflow-wrap: anywhere;
+  font-family: var(--sora-mono);
+  font-size: 0.72rem;
+}
+
+.sora-comment-environment .comment-environment-tag {
+  display: inline-flex;
+  min-height: 1.35rem;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.1rem 0.45rem;
+  background: var(--surface);
+  color: var(--muted);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
 .sora-comments-load-more {
   display: block;
   width: 100%;
@@ -1295,6 +1440,12 @@ a.sora-comment-author:hover {
 }
 
 @media (max-width: 48rem) {
+  .sora-search-dialog-shell {
+    width: min(calc(100vw - 1.5rem), 34rem);
+    max-height: calc(100dvh - 1.5rem);
+    padding: 1rem;
+  }
+
   .site-shell {
     padding-inline: 1rem;
   }

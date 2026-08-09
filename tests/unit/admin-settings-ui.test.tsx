@@ -14,6 +14,7 @@ vi.mock("@/lib/content/service", () => ({
     email: "",
     githubUrl: "",
     footerText: "",
+    footerHitokotoEnabled: false,
     allowComments: true,
     requireCommentModeration: true,
   }),
@@ -52,5 +53,19 @@ describe("admin settings UI", () => {
     expect(allowComments).toHaveClass("ui-checkbox-input");
     expect(new FormData(allowComments.closest("form")!).getAll("allowComments")).toEqual(["on"]);
     expect(screen.getByRole("button", { name: "保存设置" })).toHaveClass("ui-button-primary");
+  });
+
+  test("submits the optional hitokoto footer setting from the identity form", async () => {
+    render(await AdminSettingsPage({ searchParams: Promise.resolve({}) }));
+
+    const hitokotoSwitch = screen.getByRole("switch", { name: "使用一言 API" });
+    const form = hitokotoSwitch.closest("form");
+    expect(hitokotoSwitch).not.toBeChecked();
+    expect(new FormData(form!).has("footerHitokotoEnabled")).toBe(false);
+
+    fireEvent.click(hitokotoSwitch);
+
+    expect(hitokotoSwitch).toBeChecked();
+    expect(new FormData(form!).get("footerHitokotoEnabled")).toBe("on");
   });
 });

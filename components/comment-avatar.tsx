@@ -1,3 +1,7 @@
+"use client";
+
+import { useState } from "react";
+
 const AVATAR_COLORS = [
   "#e86252",
   "#e89c52",
@@ -18,12 +22,34 @@ function pickColor(seed: string): string {
   return AVATAR_COLORS[hash % AVATAR_COLORS.length] ?? "#8b6bd4";
 }
 
-/**
- * 本地生成的圆形首字母头像。
- * 不依赖 Gravatar 等外部服务，自托管环境下也能稳定渲染。
- */
-export function CommentAvatar({ name, size = 36 }: { name: string; size?: number }) {
+/** 优先加载 Gravatar；不存在或网络失败时使用稳定的本地首字头像。 */
+export function CommentAvatar({
+  avatarHash,
+  name,
+  size = 36,
+}: {
+  avatarHash?: string | null;
+  name: string;
+  size?: number;
+}) {
+  const [failedHash, setFailedHash] = useState<string | null>(null);
   const initial = (name.trim() || "匿").slice(0, 1).toUpperCase();
+
+  if (avatarHash && failedHash !== avatarHash) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- Gravatar may return 404 and must fall back locally.
+      <img
+        alt={`${name}的头像`}
+        className="comment-avatar comment-avatar-image"
+        height={size}
+        onError={() => setFailedHash(avatarHash)}
+        src={`https://gravatar.com/avatar/${avatarHash}?s=${size * 2}&d=404`}
+        style={{ height: size, width: size }}
+        width={size}
+      />
+    );
+  }
+
   return (
     <span
       aria-hidden="true"

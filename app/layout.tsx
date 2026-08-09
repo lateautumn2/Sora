@@ -5,6 +5,7 @@ import { getSiteSettings } from "@/lib/content/service";
 import { getEnvironment } from "@/lib/env";
 
 import "./globals.css";
+import "./admin-ui.css";
 
 export function generateMetadata(): Metadata {
   const settings = getSiteSettings();

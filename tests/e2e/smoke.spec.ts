@@ -53,7 +53,7 @@ test("redirects an anonymous administrator to setup or login", async ({ page }) 
   await expect(page).toHaveURL(/\/admin\/(setup|login)$/);
   if (page.url().endsWith("/admin/setup")) {
     await expect(page.getByRole("heading", { name: "初始化博客" })).toBeVisible();
-    await expect(page.getByLabel("初始化令牌")).toBeVisible();
+    await expect(page.getByLabel("显示名称")).toBeVisible();
   } else {
     await expect(page.getByRole("heading", { name: "登录" })).toBeVisible();
     await expect(page.getByLabel("邮箱")).toBeVisible();

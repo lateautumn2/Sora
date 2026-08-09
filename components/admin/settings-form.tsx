@@ -18,6 +18,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Field } from "@/components/ui/field";
 import { FormMessage } from "@/components/ui/form-message";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Tabs } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import type { SiteSettings } from "@/lib/content/validation";
@@ -37,7 +38,11 @@ function SubmitButton({ children }: { children: string }) {
 
   return (
     <Button className="ui-button-primary" loading={pending} type="submit">
-      {pending ? <LoaderCircle aria-hidden="true" className="animate-spin" size={17} /> : <Save aria-hidden="true" size={17} />}
+      {pending ? (
+        <LoaderCircle aria-hidden="true" className="animate-spin" size={17} />
+      ) : (
+        <Save aria-hidden="true" size={17} />
+      )}
       {pending ? "正在保存" : children}
     </Button>
   );
@@ -59,6 +64,9 @@ function SiteSettingsHiddenFields({
       <input name="email" type="hidden" value={settings.email} />
       <input name="githubUrl" type="hidden" value={settings.githubUrl} />
       <input name="footerText" type="hidden" value={settings.footerText} />
+      {settings.footerHitokotoEnabled ? (
+        <input name="footerHitokotoEnabled" type="hidden" value="on" />
+      ) : null}
       {includeCommentSettings && settings.allowComments ? (
         <input name="allowComments" type="hidden" value="on" />
       ) : null}
@@ -71,8 +79,14 @@ function SiteSettingsHiddenFields({
 
 export function SettingsForm({ runtimeConfig, settings }: SettingsFormProps) {
   const [siteState, siteAction] = useActionState(saveSiteSettingsAction, initialSiteState);
-  const [runtimeState, runtimeAction] = useActionState(saveRuntimeConfigAction, initialRuntimeState);
-  const [passwordState, passwordAction] = useActionState(changePasswordAction, initialPasswordState);
+  const [runtimeState, runtimeAction] = useActionState(
+    saveRuntimeConfigAction,
+    initialRuntimeState,
+  );
+  const [passwordState, passwordAction] = useActionState(
+    changePasswordAction,
+    initialPasswordState,
+  );
 
   return (
     <Tabs
@@ -84,7 +98,11 @@ export function SettingsForm({ runtimeConfig, settings }: SettingsFormProps) {
           content: (
             <AdminSurface>
               <form action={siteAction} className="settings-form-grid">
-                <input name="allowComments" type="hidden" value={settings.allowComments ? "on" : ""} />
+                <input
+                  name="allowComments"
+                  type="hidden"
+                  value={settings.allowComments ? "on" : ""}
+                />
                 <input
                   name="requireCommentModeration"
                   type="hidden"
@@ -114,6 +132,17 @@ export function SettingsForm({ runtimeConfig, settings }: SettingsFormProps) {
                 <Field error={siteState.fieldErrors?.footerText} label="页脚文字">
                   <Input defaultValue={settings.footerText} name="footerText" />
                 </Field>
+                <label className="settings-form-switch-row">
+                  <Switch
+                    aria-label="使用一言 API"
+                    defaultChecked={settings.footerHitokotoEnabled}
+                    name="footerHitokotoEnabled"
+                  />
+                  <span>
+                    <strong>使用一言 API</strong>
+                    <small>服务端缓存一小时；请求失败时显示上方页脚文字。</small>
+                  </span>
+                </label>
                 <SubmitButton>保存设置</SubmitButton>
               </form>
             </AdminSurface>
@@ -157,7 +186,9 @@ export function SettingsForm({ runtimeConfig, settings }: SettingsFormProps) {
           content: (
             <AdminSurface>
               <form action={runtimeAction} className="settings-form-grid">
-                {runtimeState.formError ? <FormMessage>{runtimeState.formError}</FormMessage> : null}
+                {runtimeState.formError ? (
+                  <FormMessage>{runtimeState.formError}</FormMessage>
+                ) : null}
                 <Field error={runtimeState.fieldErrors?.appUrl} label="站点地址">
                   <Input defaultValue={runtimeConfig.appUrl} name="appUrl" required type="url" />
                 </Field>
@@ -179,9 +210,16 @@ export function SettingsForm({ runtimeConfig, settings }: SettingsFormProps) {
           content: (
             <AdminSurface>
               <form action={passwordAction} className="settings-form-grid">
-                {passwordState.formError ? <FormMessage>{passwordState.formError}</FormMessage> : null}
+                {passwordState.formError ? (
+                  <FormMessage>{passwordState.formError}</FormMessage>
+                ) : null}
                 <Field error={passwordState.fieldErrors?.currentPassword} label="当前密码">
-                  <Input autoComplete="current-password" name="currentPassword" required type="password" />
+                  <Input
+                    autoComplete="current-password"
+                    name="currentPassword"
+                    required
+                    type="password"
+                  />
                 </Field>
                 <Field error={passwordState.fieldErrors?.newPassword} label="新密码">
                   <Input

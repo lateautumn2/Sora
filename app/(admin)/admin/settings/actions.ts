@@ -19,7 +19,8 @@ export type SiteSettingsField =
   | "avatarUrl"
   | "email"
   | "githubUrl"
-  | "footerText";
+  | "footerText"
+  | "footerHitokotoEnabled";
 export type SiteSettingsActionState = FormActionState<SiteSettingsField>;
 export type RuntimeConfigActionState = FormActionState<"appUrl" | "trustedOrigins">;
 export type PasswordActionState = FormActionState<
@@ -40,6 +41,7 @@ export async function saveSiteSettingsAction(
     email: formData.get("email"),
     githubUrl: formData.get("githubUrl"),
     footerText: formData.get("footerText"),
+    footerHitokotoEnabled: formData.get("footerHitokotoEnabled") === "on",
     allowComments: formData.get("allowComments") === "on",
     requireCommentModeration: formData.get("requireCommentModeration") === "on",
   });
@@ -56,6 +58,7 @@ export async function saveSiteSettingsAction(
         email: fields.email?.[0],
         githubUrl: fields.githubUrl?.[0],
         footerText: fields.footerText?.[0],
+        footerHitokotoEnabled: fields.footerHitokotoEnabled?.[0],
       },
     };
   }

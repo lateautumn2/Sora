@@ -3,7 +3,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { MultiSelect } from "@/components/ui/multi-select";
 import { SelectField } from "@/components/ui/select";
@@ -17,7 +17,18 @@ class ResizeObserverMock {
 globalThis.ResizeObserver = ResizeObserverMock;
 HTMLElement.prototype.scrollIntoView = () => {};
 
-afterEach(cleanup);
+let adminStyles: HTMLStyleElement;
+
+beforeEach(() => {
+  adminStyles = document.createElement("style");
+  adminStyles.textContent = readFileSync(join(process.cwd(), "app", "admin-ui.css"), "utf8");
+  document.head.append(adminStyles);
+});
+
+afterEach(() => {
+  cleanup();
+  adminStyles.remove();
+});
 
 const statusOptions = [
   { value: "DRAFT", label: "草稿" },
@@ -51,6 +62,16 @@ describe("admin selection controls", () => {
     fireEvent.click(screen.getByRole("checkbox", { name: "Beta" }));
 
     expect(document.querySelectorAll('[name="tagIds"]')).toHaveLength(2);
+  });
+
+  test("keeps multi-select option labels beside their checkboxes", () => {
+    render(<MultiSelect label="标签" name="tagIds" options={tagOptions} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "选择标签" }));
+
+    const option = document.querySelector<HTMLElement>(".ui-command-item");
+    if (!option) throw new Error("Multi-select option did not render.");
+    expect(getComputedStyle(option).justifyContent).toBe("flex-start");
   });
 
   test("multi-select does not toggle disabled options with mouse or keyboard input", () => {

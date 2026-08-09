@@ -1,9 +1,10 @@
 "use client";
 
 import { Eye, Heart, MessageSquare, Reply } from "lucide-react";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import { CommentAvatar } from "@/components/comment-avatar";
+import { CommentEnvironment } from "@/components/comment-environment";
 import type { PublicComment } from "@/lib/comments/service";
 
 interface PostInteractionsProps {
@@ -15,12 +16,44 @@ interface PostInteractionsProps {
 }
 
 interface InteractionResponse {
-  data?: { upvoteCount: number; viewCount?: number; upvoted: boolean; status?: "PENDING" | "APPROVED" };
+  data?: {
+    id?: string;
+    duplicate?: boolean;
+    comment?: PublicComment | null;
+    upvoteCount?: number;
+    viewCount?: number;
+    upvoted?: boolean;
+    status?: "PENDING" | "APPROVED";
+  };
   error?: { message?: string };
 }
 
 /** 评论列表初始展示的顶层评论数量，点击"加载更多"后按批追加。 */
 const COMMENTS_PAGE_SIZE = 10;
+const COMMENT_PROFILE_KEY = "sora.comment-profile.v1";
+
+interface CommentProfile {
+  authorName: string;
+  authorEmail: string;
+  authorWebsite: string;
+}
+
+function readCommentProfile(): CommentProfile {
+  const emptyProfile = { authorName: "", authorEmail: "", authorWebsite: "" };
+  if (typeof window === "undefined") return emptyProfile;
+  try {
+    const saved = window.localStorage.getItem(COMMENT_PROFILE_KEY);
+    if (!saved) return emptyProfile;
+    const profile = JSON.parse(saved) as Record<string, unknown>;
+    return {
+      authorName: typeof profile.authorName === "string" ? profile.authorName : "",
+      authorEmail: typeof profile.authorEmail === "string" ? profile.authorEmail : "",
+      authorWebsite: typeof profile.authorWebsite === "string" ? profile.authorWebsite : "",
+    };
+  } catch {
+    return emptyProfile;
+  }
+}
 
 export function PostInteractions({
   allowComment,
@@ -32,9 +65,24 @@ export function PostInteractions({
   const [upvoteCount, setUpvoteCount] = useState(initialUpvoteCount);
   const [viewCount, setViewCount] = useState(initialViewCount);
   const [upvoted, setUpvoted] = useState(false);
+  const [submittedComments, setSubmittedComments] = useState<PublicComment[]>([]);
   const [replyTo, setReplyTo] = useState<PublicComment | null>(null);
   const [message, setMessage] = useState("");
   const [pending, setPending] = useState(false);
+  const [content, setContent] = useState("");
+  const [profile, setProfile] = useState<CommentProfile>(readCommentProfile);
+  const commentItems = useMemo(() => {
+    const ids = new Set(comments.map((comment) => comment.id));
+    return [...comments, ...submittedComments.filter((comment) => !ids.has(comment.id))];
+  }, [comments, submittedComments]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(COMMENT_PROFILE_KEY, JSON.stringify(profile));
+    } catch {
+      // 存储不可用时静默降级，不影响评论提交。
+    }
+  }, [profile]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -46,19 +94,19 @@ export function PostInteractions({
       .then((payload) => {
         if (!payload.data) return;
         setViewCount(payload.data.viewCount ?? initialViewCount);
-        setUpvoteCount(payload.data.upvoteCount);
-        setUpvoted(payload.data.upvoted);
+        setUpvoteCount(payload.data.upvoteCount ?? initialUpvoteCount);
+        setUpvoted(payload.data.upvoted ?? false);
       })
       .catch(() => undefined);
     return () => controller.abort();
-  }, [initialViewCount, postId]);
+  }, [initialUpvoteCount, initialViewCount, postId]);
 
   async function handleUpvote() {
     const response = await fetch(`/api/v1/public/posts/${postId}/upvote`, { method: "POST" });
     const payload = (await response.json()) as InteractionResponse;
     if (payload.data) {
-      setUpvoteCount(payload.data.upvoteCount);
-      setUpvoted(payload.data.upvoted);
+      setUpvoteCount(payload.data.upvoteCount ?? upvoteCount);
+      setUpvoted(payload.data.upvoted ?? upvoted);
     }
   }
 
@@ -76,7 +124,7 @@ export function PostInteractions({
           authorName: form.get("authorName"),
           authorEmail: form.get("authorEmail"),
           authorWebsite: form.get("authorWebsite"),
-          content: form.get("content"),
+          content,
           company: form.get("company"),
           parentId: replyTo?.id ?? null,
           requestToken: crypto.randomUUID(),
@@ -87,9 +135,20 @@ export function PostInteractions({
         setMessage(payload.error?.message ?? "提交失败，请稍后重试");
         return;
       }
-      formElement.reset();
+      if (payload.data?.status === "APPROVED" && payload.data.comment) {
+        setSubmittedComments((items) =>
+          items.some((item) => item.id === payload.data?.comment?.id)
+            ? items
+            : [...items, payload.data!.comment!],
+        );
+        setMessage("评论已发表。");
+      } else {
+        setMessage("评论已提交，审核通过后会显示在这里。");
+      }
+      setContent("");
+      const company = formElement.elements.namedItem("company");
+      if (company instanceof HTMLInputElement) company.value = "";
       setReplyTo(null);
-      setMessage("评论已提交，审核通过后会显示在这里。");
     } catch {
       setMessage("网络请求失败，请稍后重试");
     } finally {
@@ -114,22 +173,30 @@ export function PostInteractions({
           <span aria-hidden="true">{upvoteCount}</span>
         </button>
         <span className="inline-flex items-center gap-1.5">
-          <MessageSquare aria-hidden="true" size={17} /> {comments.length}
+          <MessageSquare aria-hidden="true" size={17} /> {commentItems.length}
         </span>
       </div>
 
       <h2 className="sora-comments-title" id="post-comments">
         评论
-        <span className="sora-comments-count">{comments.length}</span>
+        <span className="sora-comments-count">{commentItems.length}</span>
       </h2>
-      <CommentList comments={comments} onReply={setReplyTo} />
+      <CommentList comments={commentItems} onReply={setReplyTo} />
 
       {allowComment ? (
         <CommentForm
+          authorEmail={profile.authorEmail}
+          authorName={profile.authorName}
+          authorWebsite={profile.authorWebsite}
+          content={content}
           message={message}
           onSubmit={handleComment}
           pending={pending}
           replyTo={replyTo}
+          setAuthorEmail={(authorEmail) => setProfile((value) => ({ ...value, authorEmail }))}
+          setAuthorName={(authorName) => setProfile((value) => ({ ...value, authorName }))}
+          setAuthorWebsite={(authorWebsite) => setProfile((value) => ({ ...value, authorWebsite }))}
+          setContent={setContent}
           setReplyTo={setReplyTo}
         />
       ) : (
@@ -140,16 +207,32 @@ export function PostInteractions({
 }
 
 function CommentForm({
+  authorEmail,
+  authorName,
+  authorWebsite,
+  content,
   message,
   onSubmit,
   pending,
   replyTo,
+  setAuthorEmail,
+  setAuthorName,
+  setAuthorWebsite,
+  setContent,
   setReplyTo,
 }: {
+  authorEmail: string;
+  authorName: string;
+  authorWebsite: string;
+  content: string;
   message: string;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   pending: boolean;
   replyTo: PublicComment | null;
+  setAuthorEmail: (value: string) => void;
+  setAuthorName: (value: string) => void;
+  setAuthorWebsite: (value: string) => void;
+  setContent: (value: string) => void;
   setReplyTo: (comment: PublicComment | null) => void;
 }) {
   return (
@@ -171,8 +254,10 @@ function CommentForm({
         className="sora-comment-textarea"
         maxLength={5000}
         name="content"
+        onChange={(event) => setContent(event.target.value)}
         placeholder="友善评论，理性发言…"
         required
+        value={content}
       />
       <div className="sora-comment-fields">
         <input
@@ -180,24 +265,30 @@ function CommentForm({
           className="form-input"
           maxLength={60}
           name="authorName"
+          onChange={(event) => setAuthorName(event.target.value)}
           placeholder="昵称 *"
           required
+          value={authorName}
         />
         <input
           aria-label="邮箱"
           className="form-input"
           maxLength={254}
           name="authorEmail"
+          onChange={(event) => setAuthorEmail(event.target.value)}
           placeholder="邮箱 *（不会公开）"
           required
           type="email"
+          value={authorEmail}
         />
         <input
           aria-label="个人网站"
           className="form-input"
           name="authorWebsite"
+          onChange={(event) => setAuthorWebsite(event.target.value)}
           placeholder="个人网站（可选）"
           type="url"
+          value={authorWebsite}
         />
       </div>
       <label className="absolute -left-[10000px] top-auto size-px overflow-hidden">
@@ -237,7 +328,14 @@ function CommentList({
 
   const topLevel = children.get(null) ?? [];
   const [visibleCount, setVisibleCount] = useState(COMMENTS_PAGE_SIZE);
+  const previousCommentCount = useRef(comments.length);
   const visibleTop = topLevel.slice(0, visibleCount);
+
+  useEffect(() => {
+    const added = comments.length - previousCommentCount.current;
+    if (added > 0) setVisibleCount((count) => count + added);
+    previousCommentCount.current = comments.length;
+  }, [comments.length]);
 
   if (comments.length === 0) {
     return <p className="sora-comments-empty">还没有公开评论。</p>;
@@ -250,7 +348,7 @@ function CommentList({
   ): React.ReactNode =>
     (visibleList ?? children.get(parentId) ?? []).map((comment) => (
       <article className="sora-comment-item" key={comment.id}>
-        <CommentAvatar name={comment.authorName} size={36} />
+        <CommentAvatar avatarHash={comment.avatarHash} name={comment.authorName} size={36} />
         <div className="sora-comment-body">
           <div className="sora-comment-meta">
             {comment.authorWebsite ? (
@@ -268,16 +366,18 @@ function CommentList({
             <time className="sora-comment-time">
               {new Date(comment.createdAt).toLocaleString("zh-CN")}
             </time>
+            <CommentEnvironment
+              browserName={comment.browserName}
+              browserVersion={comment.browserVersion}
+              className="sora-comment-environment"
+              ipCity={comment.ipCity}
+            />
           </div>
           <div
             className="prose-content sora-comment-content"
             dangerouslySetInnerHTML={{ __html: comment.renderedHtml }}
           />
-          <button
-            className="sora-comment-reply"
-            onClick={() => onReply(comment)}
-            type="button"
-          >
+          <button className="sora-comment-reply" onClick={() => onReply(comment)} type="button">
             <Reply aria-hidden="true" size={13} />
             回复
           </button>

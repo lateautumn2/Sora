@@ -55,10 +55,15 @@ export function MediaUploadForm({ action }: MediaUploadFormProps) {
             value={altText}
           />
         </Field>
-        <Button className="admin-media-upload-button" type="submit">
-          <ImageUp aria-hidden="true" size={17} />
-          上传图片
-        </Button>
+        <div className="admin-media-upload-action">
+          <span aria-hidden="true" className="ui-field-label">
+            操作
+          </span>
+          <Button className="admin-media-upload-button" type="submit">
+            <ImageUp aria-hidden="true" size={17} />
+            上传图片
+          </Button>
+        </div>
       </form>
     </AdminSurface>
   );

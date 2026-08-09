@@ -1,4 +1,4 @@
-import { GitFork, Mail, Rss, Search } from "lucide-react";
+import { GitFork, Mail, Rss } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 
@@ -10,12 +10,9 @@ import {
 } from "@/lib/content/service";
 import { PostList } from "@/components/site/post-list";
 import { PostPagination } from "@/components/site/post-pagination";
+import { SiteSearch } from "@/components/site/site-search";
 import { resolveSiteNavigation } from "@/components/site/site-navigation";
-import {
-  resolvePage,
-  resolveTotalPages,
-  SITE_PAGE_SIZE,
-} from "@/lib/content/pagination";
+import { resolvePage, resolveTotalPages, SITE_PAGE_SIZE } from "@/lib/content/pagination";
 
 export default async function HomePage({
   searchParams,
@@ -72,9 +69,7 @@ export default async function HomePage({
                 {item.label}
               </Link>
             ))}
-            <Link aria-label="搜索" href="/search" title="搜索">
-              <Search aria-hidden="true" size={17} strokeWidth={2.5} />
-            </Link>
+            <SiteSearch variant="home" />
           </nav>
         </div>
       </header>

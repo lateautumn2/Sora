@@ -403,11 +403,7 @@ export function restoreContent(id: string): void {
     .run(Date.now(), id);
 }
 
-export function listCategories(
-  includePrivate = false,
-  limit?: number,
-  offset = 0,
-): TaxonomyItem[] {
+export function listCategories(includePrivate = false, limit?: number, offset = 0): TaxonomyItem[] {
   const visibility = includePrivate
     ? "p.kind = 'POST' AND p.status <> 'TRASHED'"
     : "p.kind = 'POST' AND p.status = 'PUBLISHED' AND p.visibility = 'PUBLIC' AND p.published_at <= @now";
@@ -424,11 +420,7 @@ export function listCategories(
     .all({ now: Date.now(), limit: limit ?? Number.MAX_SAFE_INTEGER, offset }) as TaxonomyItem[];
 }
 
-export function listTags(
-  includePrivate = false,
-  limit?: number,
-  offset = 0,
-): TaxonomyItem[] {
+export function listTags(includePrivate = false, limit?: number, offset = 0): TaxonomyItem[] {
   const visibility = includePrivate
     ? "p.kind = 'POST' AND p.status <> 'TRASHED'"
     : "p.kind = 'POST' AND p.status = 'PUBLISHED' AND p.visibility = 'PUBLIC' AND p.published_at <= @now";
@@ -447,7 +439,9 @@ export function listTags(
 
 export function countTaxonomies(type: "category" | "tag"): number {
   const table = type === "category" ? "categories" : "tags";
-  const row = getDatabaseConnection().sqlite.prepare(`SELECT COUNT(*) AS total FROM ${table}`).get() as { total: number };
+  const row = getDatabaseConnection()
+    .sqlite.prepare(`SELECT COUNT(*) AS total FROM ${table}`)
+    .get() as { total: number };
   return row.total;
 }
 
@@ -499,50 +493,107 @@ export function getTaxonomyPosts(
 }
 
 export function searchPublishedPosts(query: string, limit = 20, offset = 0): ContentSummary[] {
-  const terms = buildSearchTerms(query);
-  if (!terms) {
+  const normalized = normalizeSearchQuery(query);
+  const terms = buildSearchTerms(normalized);
+  if (!normalized || !terms) {
     return [];
   }
 
+  const contains = `%${escapeLikePattern(normalized)}%`;
+
   const rows = getDatabaseConnection()
     .sqlite.prepare(
-      `SELECT ${summaryColumns}
-       FROM posts_fts f
-       JOIN posts p ON p.id = f.post_id
-       WHERE posts_fts MATCH ?
+      `WITH fts_matches AS (
+         SELECT post_id, bm25(posts_fts) AS relevance
+         FROM posts_fts
+         WHERE posts_fts MATCH ?
+       )
+       SELECT ${summaryColumns},
+              CASE
+                WHEN p.title = ? COLLATE NOCASE THEN 0
+                WHEN p.title LIKE ? ESCAPE '\\' THEN 1
+                WHEN f.post_id IS NOT NULL THEN 2
+                ELSE 3
+              END AS searchPriority,
+              COALESCE(f.relevance, 1000000) AS searchRelevance
+       FROM posts p
+       LEFT JOIN fts_matches f ON f.post_id = p.id
+       WHERE p.kind = 'POST'
+         AND p.status = 'PUBLISHED'
+         AND p.visibility = 'PUBLIC'
          AND p.published_at <= ?
-       ORDER BY bm25(posts_fts), p.published_at DESC
+         AND (
+           f.post_id IS NOT NULL
+           OR p.title LIKE ? ESCAPE '\\'
+           OR COALESCE(p.excerpt, '') LIKE ? ESCAPE '\\'
+           OR p.plain_text LIKE ? ESCAPE '\\'
+         )
+       ORDER BY searchPriority, searchRelevance, p.published_at DESC
        LIMIT ? OFFSET ?`,
     )
-    .all(terms, Date.now(), limit, offset) as ContentRow[];
+    .all(
+      terms,
+      normalized,
+      contains,
+      Date.now(),
+      contains,
+      contains,
+      contains,
+      limit,
+      offset,
+    ) as ContentRow[];
   return hydrateRows(rows);
 }
 
 /** 统计搜索结果总数，供搜索页分页计算总页数。 */
 export function countSearchPublishedPosts(query: string): number {
-  const terms = buildSearchTerms(query);
-  if (!terms) {
+  const normalized = normalizeSearchQuery(query);
+  const terms = buildSearchTerms(normalized);
+  if (!normalized || !terms) {
     return 0;
   }
+  const contains = `%${escapeLikePattern(normalized)}%`;
   const row = getDatabaseConnection()
     .sqlite.prepare(
-      `SELECT COUNT(*) AS total
-       FROM posts_fts f
-       JOIN posts p ON p.id = f.post_id
-       WHERE posts_fts MATCH ?
-         AND p.published_at <= ?`,
+      `WITH fts_matches AS (
+         SELECT post_id
+         FROM posts_fts
+         WHERE posts_fts MATCH ?
+       )
+       SELECT COUNT(DISTINCT p.id) AS total
+       FROM posts p
+       LEFT JOIN fts_matches f ON f.post_id = p.id
+       WHERE p.kind = 'POST'
+         AND p.status = 'PUBLISHED'
+         AND p.visibility = 'PUBLIC'
+         AND p.published_at <= ?
+         AND (
+           f.post_id IS NOT NULL
+           OR p.title LIKE ? ESCAPE '\\'
+           OR COALESCE(p.excerpt, '') LIKE ? ESCAPE '\\'
+           OR p.plain_text LIKE ? ESCAPE '\\'
+         )`,
     )
-    .get(terms, Date.now()) as { total: number };
+    .get(terms, Date.now(), contains, contains, contains) as { total: number };
   return row.total;
 }
 
-/** 把用户输入拆成 FTS5 匹配表达式；无有效关键词时返回空串。 */
+/** 规范化用户输入，避免全角字符和首尾空白造成不一致。 */
+function normalizeSearchQuery(query: string): string {
+  return query.normalize("NFKC").trim();
+}
+
+/** 转义 LIKE 通配符，使用户输入只作为普通文本参与包含匹配。 */
+function escapeLikePattern(value: string): string {
+  return value.replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_");
+}
+
+/** 把用户输入拆成 FTS5 前缀匹配表达式；无有效关键词时返回空串。 */
 function buildSearchTerms(query: string): string {
   return (
     query
-      .normalize("NFKC")
       .match(/[\p{Letter}\p{Number}]+/gu)
-      ?.map((term) => `"${term.replaceAll('"', '""')}"`)
+      ?.map((term) => `"${term.replaceAll('"', '""')}"*`)
       .join(" AND ") ?? ""
   );
 }
@@ -622,7 +673,10 @@ export interface DashboardTopPost {
  * 按访问量降序分页查询已发布文章，供仪表盘"每篇文章访问量"表格使用。
  * 返回当前页数据与总文章数，便于计算总页数。
  */
-export function listTopPostsByViews(limit: number, offset: number): {
+export function listTopPostsByViews(
+  limit: number,
+  offset: number,
+): {
   posts: DashboardTopPost[];
   total: number;
 } {

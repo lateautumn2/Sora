@@ -72,6 +72,16 @@ export function ContentEditor({ kind, content, categories, tags }: ContentEditor
           返回列表
         </Link>
         <div className="content-editor-toolbar-actions">
+          {content ? (
+            <form action={trashContentAction} className="content-editor-toolbar-trash">
+              <input name="id" type="hidden" value={content.id} />
+              <input name="kind" type="hidden" value={kind} />
+              <Button className="ui-button-danger" type="submit">
+                <Trash2 aria-hidden="true" size={16} />
+                移至回收站
+              </Button>
+            </form>
+          ) : null}
           <Button form="content-editor-form" loading={pending} type="submit">
             <Save aria-hidden="true" size={16} />
             {pending ? "正在保存" : "保存内容"}
@@ -131,17 +141,6 @@ export function ContentEditor({ kind, content, categories, tags }: ContentEditor
 
         {state.formError ? <FormMessage>{state.formError}</FormMessage> : null}
       </form>
-
-      {content ? (
-        <form action={trashContentAction} className="content-editor-trash">
-          <input name="id" type="hidden" value={content.id} />
-          <input name="kind" type="hidden" value={kind} />
-          <button className="content-editor-trash-action" type="submit">
-            <Trash2 aria-hidden="true" size={16} />
-            移至回收站
-          </button>
-        </form>
-      ) : null}
     </div>
   );
 }

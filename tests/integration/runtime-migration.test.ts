@@ -44,7 +44,7 @@ describe("runtime migration script", () => {
     const commentColumns = sqlite.pragma("table_info(comments)") as Array<{ name: string }>;
 
     try {
-      expect(firstOutput).toContain("applied: 7");
+      expect(firstOutput).toContain("applied: 8");
       expect(secondOutput).toContain("applied: 0");
       expect(tables).toContain("posts");
       expect(tables).toContain("comments");
@@ -57,7 +57,10 @@ describe("runtime migration script", () => {
       expect(tables).not.toContain("migration_id_map");
       expect(mediaColumns.map((column) => column.name)).not.toContain("source");
       expect(commentColumns.map((column) => column.name)).not.toContain("source");
-      expect(migrationCount.count).toBe(7);
+      expect(commentColumns.map((column) => column.name)).toEqual(
+        expect.arrayContaining(["ip_address", "ip_city", "browser_name", "browser_version"]),
+      );
+      expect(migrationCount.count).toBe(8);
       expect(sqlite.pragma("foreign_key_check")).toEqual([]);
     } finally {
       sqlite.close();

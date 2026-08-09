@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Button, IconButton } from "./button";
+import { cn } from "./cn";
 import { Tooltip } from "./tooltip";
 
 export interface DialogProps {
@@ -13,6 +14,7 @@ export interface DialogProps {
   triggerTooltip?: ReactNode;
   title: string;
   children: ReactNode;
+  contentClassName?: string;
   description?: string;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -20,6 +22,7 @@ export interface DialogProps {
 
 export function Dialog({
   children,
+  contentClassName,
   description,
   onOpenChange,
   open,
@@ -36,7 +39,7 @@ export function Dialog({
       {triggerTooltip ? <Tooltip content={triggerTooltip}>{dialogTrigger}</Tooltip> : dialogTrigger}
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="ui-dialog-overlay" />
-        <DialogPrimitive.Content className="ui-dialog-content">
+        <DialogPrimitive.Content className={cn("ui-dialog-content", contentClassName)}>
           <div className="ui-dialog-header">
             <div>
               <DialogPrimitive.Title className="ui-dialog-title">{title}</DialogPrimitive.Title>

@@ -1,10 +1,7 @@
 import { createPublicComment, InteractionError } from "@/lib/comments/service";
+import { resolveCommentRequestContext } from "@/lib/comments/request-context";
 import { publicCommentSchema } from "@/lib/comments/validation";
-import {
-  getVisitorHash,
-  isTrustedRequestOrigin,
-  summarizeUserAgent,
-} from "@/lib/interactions/request";
+import { getVisitorHash, isTrustedRequestOrigin } from "@/lib/interactions/request";
 
 const errorMessages = {
   POST_NOT_FOUND: "文章不存在或尚未公开",
@@ -47,14 +44,22 @@ export async function POST(
   }
 
   try {
+    const context = await resolveCommentRequestContext(request);
     const result = createPublicComment(
       (await params).postId,
       parsed.data,
       getVisitorHash(request),
-      summarizeUserAgent(request),
+      context,
     );
     return Response.json(
-      { data: { id: result.id, status: result.status, duplicate: result.duplicate } },
+      {
+        data: {
+          id: result.id,
+          status: result.status,
+          duplicate: result.duplicate,
+          comment: result.comment,
+        },
+      },
       { status: result.duplicate ? 200 : 201 },
     );
   } catch (error) {

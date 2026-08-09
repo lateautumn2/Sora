@@ -159,34 +159,36 @@ function EditorSettingsFields({
         </fieldset>
       ) : null}
 
-      <fieldset className="editor-settings-panel-seo">
-        <legend>SEO 设置</legend>
-        <Field label="SEO 标题">
-          <Input
-            form={formId}
-            name="seoTitle"
-            onChange={(event) => updateMetadata("seoTitle", event.target.value)}
-            value={metadata.seoTitle}
-          />
-        </Field>
-        <Field label="SEO 描述">
-          <Textarea
-            form={formId}
-            name="seoDescription"
-            onChange={(event) => updateMetadata("seoDescription", event.target.value)}
-            value={metadata.seoDescription}
-          />
-        </Field>
-        <Field label="规范链接">
-          <Input
-            form={formId}
-            name="canonicalUrl"
-            onChange={(event) => updateMetadata("canonicalUrl", event.target.value)}
-            type="url"
-            value={metadata.canonicalUrl}
-          />
-        </Field>
-      </fieldset>
+      <details className="editor-settings-panel-seo">
+        <summary>SEO 设置</summary>
+        <div className="editor-settings-panel-seo-fields">
+          <Field label="SEO 标题">
+            <Input
+              form={formId}
+              name="seoTitle"
+              onChange={(event) => updateMetadata("seoTitle", event.target.value)}
+              value={metadata.seoTitle}
+            />
+          </Field>
+          <Field label="SEO 描述">
+            <Textarea
+              form={formId}
+              name="seoDescription"
+              onChange={(event) => updateMetadata("seoDescription", event.target.value)}
+              value={metadata.seoDescription}
+            />
+          </Field>
+          <Field label="规范链接">
+            <Input
+              form={formId}
+              name="canonicalUrl"
+              onChange={(event) => updateMetadata("canonicalUrl", event.target.value)}
+              type="url"
+              value={metadata.canonicalUrl}
+            />
+          </Field>
+        </div>
+      </details>
 
       {kind === "POST" ? (
         <div className="editor-settings-panel-taxonomy">

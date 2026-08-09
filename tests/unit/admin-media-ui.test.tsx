@@ -3,11 +3,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
-import {
-  MediaAddressTabs,
-  MediaPreview,
-  MediaUploadForm,
-} from "@/components/admin/media-manager";
+import { MediaAddressTabs, MediaPreview, MediaUploadForm } from "@/components/admin/media-manager";
 import { UIProvider } from "@/components/ui/ui-provider";
 
 const writeText = vi.fn().mockResolvedValue(undefined);
@@ -23,8 +19,11 @@ beforeEach(() => {
 afterEach(cleanup);
 
 test("uses the shared file input and Radix preview dialog", () => {
-  const { unmount } = render(<MediaUploadForm action={vi.fn()} />);
+  const { container, unmount } = render(<MediaUploadForm action={vi.fn()} />);
   expect(screen.getByLabelText("选择图片")).toHaveClass("ui-file-input-native");
+  expect(container.querySelector(".admin-media-upload-action")).toContainElement(
+    screen.getByRole("button", { name: "上传图片" }),
+  );
 
   unmount();
   render(
