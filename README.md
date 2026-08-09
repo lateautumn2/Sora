@@ -44,18 +44,17 @@ docker compose up -d app
 
 ## 本地开发
 
-需要 Node.js 22 和 pnpm 10：
+需要 Node.js 22，并准备可用的 pnpm：
 
 ```shell
 cp .env.example .env.local
 corepack enable
-corepack install --global pnpm@10
 pnpm install
 pnpm db:migrate:runtime
 pnpm dev
 ```
 
-Corepack 的启用和 pnpm 10 安装只需为当前 Node.js 安装执行一次，项目支持 pnpm 10.26 及以上的 10.x 版本。Windows PowerShell 使用 `Copy-Item .env.example .env.local`。开发服务默认位于 `http://127.0.0.1:3000`，后台入口是 `/admin`。`.env.example` 中的默认值只适合本地开发；生产环境无需配置密钥，首次启动会自动生成并持久化。
+Corepack 只需为当前 Node.js 安装启用一次。项目不通过清单限制本机 pnpm 主版本；若安装失败，请根据错误检查或切换 pnpm 版本。CI 与 Docker 当前使用 pnpm 10 作为官方构建基线。Windows PowerShell 使用 `Copy-Item .env.example .env.local`。开发服务默认位于 `http://127.0.0.1:3000`，后台入口是 `/admin`。`.env.example` 中的默认值只适合本地开发；生产环境无需配置密钥，首次启动会自动生成并持久化。
 
 提交前可执行完整检查：
 
