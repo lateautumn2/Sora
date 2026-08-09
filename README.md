@@ -48,12 +48,14 @@ docker compose up -d app
 
 ```shell
 cp .env.example .env.local
-pnpm install --frozen-lockfile
+corepack enable
+corepack install --global pnpm@10
+pnpm install
 pnpm db:migrate:runtime
 pnpm dev
 ```
 
-Windows PowerShell 使用 `Copy-Item .env.example .env.local`。开发服务默认位于 `http://127.0.0.1:3000`，后台入口是 `/admin`。`.env.example` 中的默认值只适合本地开发；生产环境无需配置密钥，首次启动会自动生成并持久化。
+Corepack 的启用和 pnpm 10 安装只需为当前 Node.js 安装执行一次，项目支持 pnpm 10.26 及以上的 10.x 版本。Windows PowerShell 使用 `Copy-Item .env.example .env.local`。开发服务默认位于 `http://127.0.0.1:3000`，后台入口是 `/admin`。`.env.example` 中的默认值只适合本地开发；生产环境无需配置密钥，首次启动会自动生成并持久化。
 
 提交前可执行完整检查：
 

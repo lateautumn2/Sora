@@ -3,9 +3,3 @@ allowBuilds:
   esbuild: true
   sharp: true
   unrs-resolver: true
-# pnpm 10.26+ 的依赖构建许可配置（原 package.json 中 pnpm.onlyBuiltDependencies 的新位置）。
-onlyBuiltDependencies:
-  - better-sqlite3
-  - esbuild
-  - sharp
-  - unrs-resolver
