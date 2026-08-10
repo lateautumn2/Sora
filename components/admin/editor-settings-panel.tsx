@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { SelectField } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip } from "@/components/ui/tooltip";
+import { resolveCoverImageUrl } from "@/lib/content/cover-image";
 import type { ContentDetail, TaxonomyItem } from "@/lib/content/service";
 import type { MediaSelectionItem } from "@/lib/media/service";
 
@@ -91,18 +92,22 @@ function CoverMediaField({
   media,
   mediaId,
   onValueChange,
+  requestIdentity,
   url,
 }: {
   formId: string;
   media: MediaSelectionItem[];
   mediaId: string;
   onValueChange: (value: Pick<EditorMetadata, "coverMediaId" | "coverUrl">) => void;
+  requestIdentity: string;
   url: string;
 }) {
   const [open, setOpen] = useState(false);
   const selected = media.find((item) => item.id === mediaId);
   const externalUrl = /^https?:\/\/\S+$/i.test(url.trim()) ? url.trim() : "";
-  const previewUrl = selected ? `/media/${selected.storageKey}` : externalUrl;
+  const previewUrl = selected
+    ? `/media/${selected.storageKey}`
+    : resolveCoverImageUrl(externalUrl, requestIdentity);
 
   return (
     <Field label="文章封面">
@@ -207,11 +212,13 @@ function EditorSettingsFields({
   metadata,
   onMetadataChange,
   onSlugChange,
+  requestIdentity,
   slug,
   tags,
 }: Omit<EditorSettingsPanelProps, "content"> & {
   metadata: EditorMetadata;
   onMetadataChange: (metadata: EditorMetadata) => void;
+  requestIdentity: string;
 }) {
   function updateMetadata<K extends keyof EditorMetadata>(key: K, value: EditorMetadata[K]) {
     onMetadataChange({ ...metadata, [key]: value });
@@ -263,6 +270,7 @@ function EditorSettingsFields({
             media={media}
             mediaId={metadata.coverMediaId}
             onValueChange={(value) => onMetadataChange({ ...metadata, ...value })}
+            requestIdentity={requestIdentity}
             url={metadata.coverUrl}
           />
           <fieldset className="editor-settings-panel-options">
@@ -381,7 +389,12 @@ export function EditorSettingsPanel({ content, ...props }: EditorSettingsPanelPr
   const isMobile = useMobileLayout();
   const [metadata, setMetadata] = useState(() => createMetadata(content));
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const fieldProps = { ...props, metadata, onMetadataChange: setMetadata };
+  const fieldProps = {
+    ...props,
+    metadata,
+    onMetadataChange: setMetadata,
+    requestIdentity: content ? `${content.id}-${content.updatedAt}` : "new-post",
+  };
 
   if (isMobile) {
     return (
