@@ -54,16 +54,13 @@ function writeRuntimeConfigFile(config: RuntimeConfig): void {
 }
 
 /**
- * 读取运行期配置。生产运行时首次读取会创建默认 runtime.json；
- * 开发/测试/构建环境只返回内存默认值，不触碰数据卷。
+ * 读取运行期配置。生产环境每次从数据卷读取，确保 Server Action、API 路由等
+ * 独立服务端模块都能立即观察到最新配置；首次读取会创建默认 runtime.json。
+ * 开发/测试/构建环境只使用内存缓存，不触碰数据卷。
  */
 export function getRuntimeConfig(): RuntimeConfig {
-  if (cachedRuntimeConfig) {
-    return cachedRuntimeConfig;
-  }
-
   if (!isProductionRuntime()) {
-    cachedRuntimeConfig = defaultRuntimeConfig();
+    cachedRuntimeConfig ??= defaultRuntimeConfig();
     return cachedRuntimeConfig;
   }
 
@@ -80,20 +77,21 @@ export function getRuntimeConfig(): RuntimeConfig {
     writeRuntimeConfigFile(parsed);
   }
 
-  cachedRuntimeConfig = { appUrl: parsed.appUrl, trustedOrigins: parsed.trustedOrigins };
-  return cachedRuntimeConfig;
+  return { appUrl: parsed.appUrl, trustedOrigins: parsed.trustedOrigins };
 }
 
 /**
- * 保存运行期配置并立即更新内存缓存。
- * 生产环境写入 runtime.json；开发/测试环境只更新缓存（不落盘）。
+ * 保存运行期配置。生产环境写入 runtime.json，后续请求会从数据卷读取新值；
+ * 开发/测试环境只更新内存缓存（不落盘）。
  */
 export function saveRuntimeConfig(next: RuntimeConfig): void {
   const parsed = runtimeConfigSchema.parse(next);
-  cachedRuntimeConfig = { appUrl: parsed.appUrl, trustedOrigins: parsed.trustedOrigins };
+  const config = { appUrl: parsed.appUrl, trustedOrigins: parsed.trustedOrigins };
   if (isProductionRuntime()) {
-    writeRuntimeConfigFile(cachedRuntimeConfig);
+    writeRuntimeConfigFile(config);
+    return;
   }
+  cachedRuntimeConfig = config;
 }
 
 /** 当前站点对外地址（含协议与端口）。 */
