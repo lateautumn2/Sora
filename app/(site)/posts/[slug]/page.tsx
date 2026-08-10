@@ -107,12 +107,14 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
         </div>
       </header>
 
-      <div className="sora-time-notice">
-        <Clock3 aria-hidden="true" size={18} />
-        <span>
-          本文最后更新于 {updatedDays} 天前，其中的信息可能已经{timeChangePhrase}。
-        </span>
-      </div>
+      {updatedDays > 30 ? (
+        <div className="sora-time-notice">
+          <Clock3 aria-hidden="true" size={18} />
+          <span>
+            本文最后更新于 {updatedDays} 天前，其中的信息可能已经{timeChangePhrase}。
+          </span>
+        </div>
+      ) : null}
 
       <section className="sora-reading-surface">
         <PostContent html={post.renderedHtml} />

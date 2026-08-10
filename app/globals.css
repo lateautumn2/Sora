@@ -361,7 +361,7 @@ input[type="file"].form-input:hover::file-selector-button {
 
 .sora-post-back-button {
   position: fixed;
-  right: max(1rem, calc((100vw - var(--sora-reading-width)) / 2 - 3.25rem));
+  right: max(1rem, calc((100vw - var(--sora-reading-width)) / 2 - 13.25rem));
   bottom: 1.25rem;
   z-index: 40;
   display: grid;

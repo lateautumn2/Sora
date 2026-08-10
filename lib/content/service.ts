@@ -429,18 +429,18 @@ export function saveContent(input: ContentInput): string {
 
 export function trashContent(id: string): void {
   getDatabaseConnection()
-    .sqlite.prepare(
-      "UPDATE posts SET status = 'TRASHED', published_at = NULL, updated_at = ? WHERE id = ?",
-    )
-    .run(Date.now(), id);
+    .sqlite.prepare("UPDATE posts SET status = 'TRASHED' WHERE id = ? AND status <> 'TRASHED'")
+    .run(id);
 }
 
 export function restoreContent(id: string): void {
   getDatabaseConnection()
     .sqlite.prepare(
-      "UPDATE posts SET status = 'DRAFT', updated_at = ? WHERE id = ? AND status = 'TRASHED'",
+      `UPDATE posts
+       SET status = CASE WHEN published_at IS NULL THEN 'DRAFT' ELSE 'PUBLISHED' END
+       WHERE id = ? AND status = 'TRASHED'`,
     )
-    .run(Date.now(), id);
+    .run(id);
 }
 
 export function listCategories(includePrivate = false, limit?: number, offset = 0): TaxonomyItem[] {

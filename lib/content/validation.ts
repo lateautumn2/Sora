@@ -13,8 +13,14 @@ const slugSchema = z
     "URL 别名只能包含文字、数字和连字符",
   );
 
+/**
+ * 数据库与内容包格式允许使用 UUID 或迁移来源的稳定字符串作为实体 ID。
+ * ID 只会作为参数化 SQL 的关联值使用，因此这里约束非空与长度，不强制 UUID。
+ */
+const storedIdentifierSchema = z.string().trim().min(1).max(255);
+
 export const contentInputSchema = z.object({
-  id: z.string().uuid().optional(),
+  id: storedIdentifierSchema.optional(),
   kind: contentKindSchema,
   title: z.string().trim().min(1, "请输入标题").max(200, "标题不能超过 200 个字符"),
   slug: slugSchema,
@@ -25,7 +31,7 @@ export const contentInputSchema = z.object({
   visibility: z.enum(["PUBLIC", "PRIVATE"]),
   allowComment: z.boolean(),
   pinned: z.boolean(),
-  coverMediaId: z.union([z.literal(""), z.string().uuid()]).optional(),
+  coverMediaId: z.union([z.literal(""), storedIdentifierSchema]).optional(),
   coverUrl: z
     .union([
       z.literal(""),
@@ -36,8 +42,8 @@ export const contentInputSchema = z.object({
         .refine((value) => /^https?:\/\//i.test(value), "封面图片 URL 仅支持 HTTP(S)"),
     ])
     .optional(),
-  categoryIds: z.array(z.string().uuid()).default([]),
-  tagIds: z.array(z.string().uuid()).default([]),
+  categoryIds: z.array(storedIdentifierSchema).default([]),
+  tagIds: z.array(storedIdentifierSchema).default([]),
   seoTitle: z.string().trim().max(200).optional(),
   seoDescription: z.string().trim().max(500).optional(),
   canonicalUrl: z.union([z.literal(""), z.string().url("规范链接格式不正确")]).optional(),
