@@ -672,7 +672,7 @@ input[type="file"].form-input:hover::file-selector-button {
 
 .sora-post-card-link {
   display: grid;
-  min-height: 7.6rem;
+  height: 10rem;
   grid-template-columns: minmax(0, 1fr);
 }
 
@@ -1570,6 +1570,7 @@ a.sora-comment-author:hover {
   }
 
   .sora-post-card-link {
+    height: auto;
     min-height: 0;
   }
 

@@ -1,4 +1,4 @@
-import { GitFork, Mail, Rss } from "lucide-react";
+import { Mail, Rss } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 
@@ -12,7 +12,12 @@ import { PostList } from "@/components/site/post-list";
 import { PostPagination } from "@/components/site/post-pagination";
 import { SiteSearch } from "@/components/site/site-search";
 import { resolveSiteNavigation } from "@/components/site/site-navigation";
-import { BilibiliIcon, WeiboIcon, XBrandIcon } from "@/components/site/social-brand-icons";
+import {
+  BilibiliIcon,
+  GithubIcon,
+  WeiboIcon,
+  XBrandIcon,
+} from "@/components/site/social-brand-icons";
 import { resolvePage, resolveTotalPages, SITE_PAGE_SIZE } from "@/lib/content/pagination";
 import { sanitizeHomeQuote } from "@/lib/content/render";
 
@@ -52,7 +57,7 @@ export default async function HomePage({
                 target="_blank"
                 title="GitHub"
               >
-                <GitFork aria-hidden="true" size={20} />
+                <GithubIcon aria-hidden="true" height={20} width={20} />
               </a>
             ) : null}
             {settings.weiboUrl ? (

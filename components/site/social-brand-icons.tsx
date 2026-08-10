@@ -10,7 +10,25 @@ function BrandIcon({ children, ...props }: BrandIconProps & { children: ReactNod
   );
 }
 
-// Brand paths are sourced from the Simple Icons project.
+// Brand paths are sourced from the Simple Icons project unless noted otherwise.
+// GitHub uses an outlined Octocat mark to match the lightweight line style of the surrounding interface icons.
+export function GithubIcon(props: BrandIconProps) {
+  return (
+    <svg
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+      {...props}
+    >
+      <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3.28-.36 6.72-1.61 6.72-7.25A5.65 5.65 0 0 0 19.22 3.3 5.3 5.3 0 0 0 19.08.32S17.9-.06 15 1.82a13.38 13.38 0 0 0-6 0C6.1-.06 4.92.32 4.92.32A5.3 5.3 0 0 0 4.78 3.3a5.65 5.65 0 0 0-1.5 3.95c0 5.63 3.44 6.88 6.72 7.25A4.8 4.8 0 0 0 9 18v4" />
+      <path d="M9 19c-3 .92-3-1.5-4-2" />
+    </svg>
+  );
+}
+
 export function WeiboIcon(props: BrandIconProps) {
   return (
     <BrandIcon {...props}>
