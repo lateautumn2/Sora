@@ -41,7 +41,6 @@ COPY --from=builder --chown=nextjs:nodejs /app/scripts/backup.mjs ./scripts/back
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/restore.mjs ./scripts/restore.mjs
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/content-import.mjs ./scripts/content-import.mjs
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/entrypoint.mjs ./scripts/entrypoint.mjs
-USER nextjs
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
