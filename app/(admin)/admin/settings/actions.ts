@@ -15,12 +15,17 @@ import { saveRuntimeConfig } from "@/lib/runtime-config";
 export type SiteSettingsField =
   | "title"
   | "description"
+  | "homeQuoteHtml"
   | "authorName"
   | "avatarUrl"
+  | "faviconUrl"
   | "email"
   | "githubUrl"
+  | "weiboUrl"
+  | "bilibiliUrl"
+  | "xUrl"
   | "footerText"
-  | "footerHitokotoEnabled";
+  | "footerQuoteSource";
 export type SiteSettingsActionState = FormActionState<SiteSettingsField>;
 export type RuntimeConfigActionState = FormActionState<"appUrl" | "trustedOrigins">;
 export type PasswordActionState = FormActionState<
@@ -36,12 +41,17 @@ export async function saveSiteSettingsAction(
   const result = siteSettingsSchema.safeParse({
     title: formData.get("title"),
     description: formData.get("description"),
+    homeQuoteHtml: formData.get("homeQuoteHtml"),
     authorName: formData.get("authorName"),
     avatarUrl: formData.get("avatarUrl"),
+    faviconUrl: formData.get("faviconUrl"),
     email: formData.get("email"),
     githubUrl: formData.get("githubUrl"),
+    weiboUrl: formData.get("weiboUrl"),
+    bilibiliUrl: formData.get("bilibiliUrl"),
+    xUrl: formData.get("xUrl"),
     footerText: formData.get("footerText"),
-    footerHitokotoEnabled: formData.get("footerHitokotoEnabled") === "on",
+    footerQuoteSource: formData.get("footerQuoteSource"),
     allowComments: formData.get("allowComments") === "on",
     requireCommentModeration: formData.get("requireCommentModeration") === "on",
   });
@@ -53,12 +63,17 @@ export async function saveSiteSettingsAction(
       fieldErrors: {
         title: fields.title?.[0],
         description: fields.description?.[0],
+        homeQuoteHtml: fields.homeQuoteHtml?.[0],
         authorName: fields.authorName?.[0],
         avatarUrl: fields.avatarUrl?.[0],
+        faviconUrl: fields.faviconUrl?.[0],
         email: fields.email?.[0],
         githubUrl: fields.githubUrl?.[0],
+        weiboUrl: fields.weiboUrl?.[0],
+        bilibiliUrl: fields.bilibiliUrl?.[0],
+        xUrl: fields.xUrl?.[0],
         footerText: fields.footerText?.[0],
-        footerHitokotoEnabled: fields.footerHitokotoEnabled?.[0],
+        footerQuoteSource: fields.footerQuoteSource?.[0],
       },
     };
   }

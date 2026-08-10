@@ -25,6 +25,17 @@ export const contentInputSchema = z.object({
   visibility: z.enum(["PUBLIC", "PRIVATE"]),
   allowComment: z.boolean(),
   pinned: z.boolean(),
+  coverMediaId: z.union([z.literal(""), z.string().uuid()]).optional(),
+  coverUrl: z
+    .union([
+      z.literal(""),
+      z
+        .string()
+        .trim()
+        .url("封面图片 URL 格式不正确")
+        .refine((value) => /^https?:\/\//i.test(value), "封面图片 URL 仅支持 HTTP(S)"),
+    ])
+    .optional(),
   categoryIds: z.array(z.string().uuid()).default([]),
   tagIds: z.array(z.string().uuid()).default([]),
   seoTitle: z.string().trim().max(200).optional(),
@@ -63,12 +74,17 @@ export const taxonomyInputSchema = z.object({
 export const siteSettingsSchema = z.object({
   title: z.string().trim().min(1).max(80).default("Sora"),
   description: z.string().trim().max(240).default("记录技术、生活与仍在思考的事。"),
+  homeQuoteHtml: z.string().trim().max(20_000, "今日一言内容不能超过 20000 个字符").default(""),
   authorName: z.string().trim().max(60).default("Sora"),
   avatarUrl: z.union([z.literal(""), z.string().url()]).default(""),
+  faviconUrl: z.union([z.literal(""), z.string().url()]).default(""),
   email: z.union([z.literal(""), z.string().email()]).default(""),
   githubUrl: z.union([z.literal(""), z.string().url()]).default(""),
+  weiboUrl: z.union([z.literal(""), z.string().url()]).default(""),
+  bilibiliUrl: z.union([z.literal(""), z.string().url()]).default(""),
+  xUrl: z.union([z.literal(""), z.string().url()]).default(""),
   footerText: z.string().trim().max(160).default("内容优先，保持克制。"),
-  footerHitokotoEnabled: z.boolean().default(false),
+  footerQuoteSource: z.enum(["NONE", "HITOKOTO", "GUSHI"]).default("NONE"),
   allowComments: z.boolean().default(true),
   requireCommentModeration: z.boolean().default(true),
 });

@@ -42,7 +42,9 @@ export function ContentList({
       render: (item) => (
         <div className="admin-data-primary">
           <strong>{item.title}</strong>
-          <span>/{segment}/{item.slug}</span>
+          <span>
+            /{segment}/{item.slug}
+          </span>
         </div>
       ),
     },
@@ -59,6 +61,18 @@ export function ContentList({
           ) : null}
         </div>
       ),
+    },
+    {
+      key: "published",
+      label: "发布时间",
+      render: (item) =>
+        item.publishedAt ? (
+          <time dateTime={new Date(item.publishedAt).toISOString()}>
+            {new Date(item.publishedAt).toLocaleString("zh-CN")}
+          </time>
+        ) : (
+          <span>未发布</span>
+        ),
     },
     {
       key: "updated",

@@ -3,9 +3,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { AdminAccount } from "./admin-account";
 import { adminNavigation, isAdminNavigationActive } from "./admin-navigation";
 
-export function AdminSidebar() {
+interface AdminSidebarProps {
+  user: {
+    email: string;
+    name: string;
+  };
+}
+
+export function AdminSidebar({ user }: AdminSidebarProps) {
   const pathname = usePathname();
 
   return (
@@ -38,6 +46,7 @@ export function AdminSidebar() {
             </section>
           ))}
         </nav>
+        <AdminAccount email={user.email} name={user.name} />
       </div>
     </aside>
   );

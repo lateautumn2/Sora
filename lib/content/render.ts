@@ -169,3 +169,16 @@ export function renderComment(source: string): string {
     allowProtocolRelative: false,
   });
 }
+
+export function sanitizeHomeQuote(source: string): string {
+  return sanitizeHtml(source, {
+    allowedTags: ["a", "b", "br", "em", "i", "img", "p", "small", "span", "strong"],
+    allowedAttributes: {
+      a: ["href", "title", "rel"],
+      img: ["src", "alt", "title", "width", "height", "loading"],
+    },
+    allowedSchemes: ["http", "https", "mailto"],
+    allowedSchemesByTag: { img: ["http", "https"] },
+    allowProtocolRelative: false,
+  });
+}

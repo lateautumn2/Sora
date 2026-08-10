@@ -18,7 +18,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Field } from "@/components/ui/field";
 import { FormMessage } from "@/components/ui/form-message";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
+import { SelectField } from "@/components/ui/select";
 import { Tabs } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import type { SiteSettings } from "@/lib/content/validation";
@@ -59,14 +59,17 @@ function SiteSettingsHiddenFields({
     <>
       <input name="title" type="hidden" value={settings.title} />
       <input name="description" type="hidden" value={settings.description} />
+      <input name="homeQuoteHtml" type="hidden" value={settings.homeQuoteHtml} />
       <input name="authorName" type="hidden" value={settings.authorName} />
       <input name="avatarUrl" type="hidden" value={settings.avatarUrl} />
+      <input name="faviconUrl" type="hidden" value={settings.faviconUrl} />
       <input name="email" type="hidden" value={settings.email} />
       <input name="githubUrl" type="hidden" value={settings.githubUrl} />
+      <input name="weiboUrl" type="hidden" value={settings.weiboUrl} />
+      <input name="bilibiliUrl" type="hidden" value={settings.bilibiliUrl} />
+      <input name="xUrl" type="hidden" value={settings.xUrl} />
       <input name="footerText" type="hidden" value={settings.footerText} />
-      {settings.footerHitokotoEnabled ? (
-        <input name="footerHitokotoEnabled" type="hidden" value="on" />
-      ) : null}
+      <input name="footerQuoteSource" type="hidden" value={settings.footerQuoteSource} />
       {includeCommentSettings && settings.allowComments ? (
         <input name="allowComments" type="hidden" value="on" />
       ) : null}
@@ -115,12 +118,25 @@ export function SettingsForm({ runtimeConfig, settings }: SettingsFormProps) {
                 <Field error={siteState.fieldErrors?.description} label="站点说明">
                   <Textarea defaultValue={settings.description} name="description" />
                 </Field>
+                <Field error={siteState.fieldErrors?.homeQuoteHtml} label="今日一言">
+                  <Textarea
+                    defaultValue={settings.homeQuoteHtml}
+                    name="homeQuoteHtml"
+                    placeholder={'<img src="https://v1.jinrishici.com/all.svg">'}
+                    rows={4}
+                  />
+                </Field>
                 <Field error={siteState.fieldErrors?.authorName} label="作者名称">
                   <Input defaultValue={settings.authorName} name="authorName" />
                 </Field>
-                <Field error={siteState.fieldErrors?.avatarUrl} label="头像地址">
-                  <Input defaultValue={settings.avatarUrl} name="avatarUrl" type="url" />
-                </Field>
+                <div className="settings-form-two-columns">
+                  <Field error={siteState.fieldErrors?.avatarUrl} label="头像地址">
+                    <Input defaultValue={settings.avatarUrl} name="avatarUrl" type="url" />
+                  </Field>
+                  <Field error={siteState.fieldErrors?.faviconUrl} label="Favicon 地址">
+                    <Input defaultValue={settings.faviconUrl} name="faviconUrl" type="url" />
+                  </Field>
+                </div>
                 <div className="settings-form-two-columns">
                   <Field error={siteState.fieldErrors?.email} label="联系邮箱">
                     <Input defaultValue={settings.email} name="email" type="email" />
@@ -129,20 +145,30 @@ export function SettingsForm({ runtimeConfig, settings }: SettingsFormProps) {
                     <Input defaultValue={settings.githubUrl} name="githubUrl" type="url" />
                   </Field>
                 </div>
+                <div className="settings-form-two-columns">
+                  <Field error={siteState.fieldErrors?.weiboUrl} label="微博地址">
+                    <Input defaultValue={settings.weiboUrl} name="weiboUrl" type="url" />
+                  </Field>
+                  <Field error={siteState.fieldErrors?.bilibiliUrl} label="B站地址">
+                    <Input defaultValue={settings.bilibiliUrl} name="bilibiliUrl" type="url" />
+                  </Field>
+                </div>
+                <Field error={siteState.fieldErrors?.xUrl} label="X 地址">
+                  <Input defaultValue={settings.xUrl} name="xUrl" type="url" />
+                </Field>
                 <Field error={siteState.fieldErrors?.footerText} label="页脚文字">
                   <Input defaultValue={settings.footerText} name="footerText" />
                 </Field>
-                <label className="settings-form-switch-row">
-                  <Switch
-                    aria-label="使用一言 API"
-                    defaultChecked={settings.footerHitokotoEnabled}
-                    name="footerHitokotoEnabled"
-                  />
-                  <span>
-                    <strong>使用一言 API</strong>
-                    <small>服务端缓存一小时；请求失败时显示上方页脚文字。</small>
-                  </span>
-                </label>
+                <SelectField
+                  defaultValue={settings.footerQuoteSource}
+                  label="页脚随机语句"
+                  name="footerQuoteSource"
+                  options={[
+                    { value: "NONE", label: "关闭" },
+                    { value: "HITOKOTO", label: "一言" },
+                    { value: "GUSHI", label: "古诗词" },
+                  ]}
+                />
                 <SubmitButton>保存设置</SubmitButton>
               </form>
             </AdminSurface>

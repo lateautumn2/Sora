@@ -9,7 +9,7 @@ if (process.env.NODE_ENV === "development") {
 const contentSecurityPolicy = [
   "default-src 'self'",
   "base-uri 'self'",
-  "connect-src 'self' https://v1.hitokoto.cn",
+  "connect-src 'self'",
   "font-src 'self' data: https://fontsapi.zeoseven.com https://fontsapi-storage.zeoseven.com",
   "form-action 'self'",
   "frame-ancestors 'none'",

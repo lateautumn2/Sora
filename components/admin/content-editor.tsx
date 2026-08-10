@@ -1,12 +1,12 @@
 "use client";
 
-import gfm from "@bytemd/plugin-gfm";
-import { Editor } from "@bytemd/react";
-import zhHans from "bytemd/locales/zh_Hans.json";
-import "bytemd/dist/index.css";
-import { ArrowLeft, Save, Trash2 } from "lucide-react";
+import { TextAreaTextApi, type ICommand, type MDEditorProps } from "@uiw/react-md-editor";
+import { getCommands, getExtraCommands } from "@uiw/react-md-editor/commands-cn";
+import "@uiw/react-md-editor/markdown-editor.css";
+import { ArrowLeft, ImagePlus, Save, Trash2 } from "lucide-react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useCallback, useMemo, useState, type DragEvent } from "react";
 
 import {
   saveContentAction,
@@ -19,11 +19,13 @@ import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form-message";
 import type { ContentDetail, TaxonomyItem } from "@/lib/content/service";
 import { normalizeSlug } from "@/lib/content/validation";
+import type { MediaSelectionItem } from "@/lib/media/service";
 
 interface ContentEditorProps {
   kind: "POST" | "PAGE";
   content?: ContentDetail;
   categories: TaxonomyItem[];
+  media?: MediaSelectionItem[];
   tags: TaxonomyItem[];
 }
 
@@ -33,22 +35,46 @@ interface UploadResult {
 }
 
 const initialState: ContentActionState = { status: "idle" };
+const MDEditor = dynamic<MDEditorProps>(
+  () => import("@uiw/react-md-editor").then((module) => module.default),
+  { ssr: false },
+);
 
 /**
- * 编辑器主区只保留标题和 ByteMD，避免设置字段打断写作。
+ * 编辑器主区只保留标题和 Markdown 编辑器，避免设置字段打断写作。
  * 设置字段由 EditorSettingsPanel 管理；移动端 Portal 中的字段通过 form 属性关联本表单。
  */
-export function ContentEditor({ kind, content, categories, tags }: ContentEditorProps) {
+export function ContentEditor({ kind, content, categories, media = [], tags }: ContentEditorProps) {
   const [state, formAction, pending] = useActionState(saveContentAction, initialState);
   const [title, setTitle] = useState(content?.title ?? "");
   const [slug, setSlug] = useState(content?.slug ?? "");
   const [slugEdited, setSlugEdited] = useState(Boolean(content?.slug));
   const [source, setSource] = useState(content?.sourceContent ?? "");
+  const [uploadError, setUploadError] = useState("");
   const noun = kind === "POST" ? "文章" : "页面";
   const listHref = kind === "POST" ? "/admin/posts" : "/admin/pages";
-  const plugins = useMemo(() => [gfm()], []);
+  const availableMedia = useMemo(() => {
+    if (
+      !content?.cover?.id ||
+      !content.cover.storageKey ||
+      media.some((item) => item.id === content.cover?.id)
+    ) {
+      return media;
+    }
 
-  async function uploadImages(files: File[]): Promise<Array<{ url: string; alt?: string }>> {
+    return [
+      {
+        id: content.cover.id,
+        storageKey: content.cover.storageKey,
+        originalName: content.cover.originalName,
+        altText: content.cover.altText,
+      },
+      ...media,
+    ];
+  }, [content, media]);
+
+  const uploadImages = useCallback(async (files: File[]) => {
+    setUploadError("");
     const uploaded: Array<{ url: string; alt?: string }> = [];
     for (const file of files) {
       const form = new FormData();
@@ -62,7 +88,82 @@ export function ContentEditor({ kind, content, categories, tags }: ContentEditor
       uploaded.push({ url: payload.data.url, alt: payload.data.alt });
     }
     return uploaded;
-  }
+  }, []);
+
+  const insertUploadedImages = useCallback(
+    async (files: File[], textApi: TextAreaTextApi) => {
+      try {
+        const uploaded = await uploadImages(files);
+        const markdown = uploaded
+          .map((item, index) => {
+            const fallbackAlt = files[index]?.name.replace(/\.[^.]+$/, "") ?? "图片";
+            const alt = (item.alt || fallbackAlt).replace(/[\\\[\]]/g, "\\$&");
+            return `![${alt}](${item.url})`;
+          })
+          .join("\n\n");
+        textApi.replaceSelection(markdown);
+      } catch (error) {
+        setUploadError(error instanceof Error ? error.message : "图片上传失败");
+      }
+    },
+    [uploadImages],
+  );
+
+  const uploadCommand = useMemo<ICommand>(
+    () => ({
+      name: "upload-image",
+      keyCommand: "upload-image",
+      buttonProps: { "aria-label": "上传图片", title: "上传图片" },
+      icon: <ImagePlus aria-hidden="true" size={15} />,
+      execute: (_state, textApi) => {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = "image/*";
+        input.multiple = true;
+        input.addEventListener(
+          "change",
+          () => {
+            const files = Array.from(input.files ?? []);
+            if (files.length > 0) void insertUploadedImages(files, textApi);
+          },
+          { once: true },
+        );
+        input.click();
+      },
+    }),
+    [insertUploadedImages],
+  );
+
+  const editorCommands = useMemo(() => {
+    const defaultCommands = getCommands();
+    const imageIndex = defaultCommands.findIndex((command) => command.keyCommand === "image");
+    defaultCommands.splice(imageIndex + 1, 0, uploadCommand);
+    return defaultCommands;
+  }, [uploadCommand]);
+
+  const handleImagePaste = useCallback(
+    (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      const files = Array.from(event.clipboardData.files).filter((file) =>
+        file.type.startsWith("image/"),
+      );
+      if (files.length === 0) return;
+      event.preventDefault();
+      void insertUploadedImages(files, new TextAreaTextApi(event.currentTarget));
+    },
+    [insertUploadedImages],
+  );
+
+  const handleImageDrop = useCallback(
+    (event: DragEvent<HTMLTextAreaElement>) => {
+      const files = Array.from(event.dataTransfer.files).filter((file) =>
+        file.type.startsWith("image/"),
+      );
+      if (files.length === 0) return;
+      event.preventDefault();
+      void insertUploadedImages(files, new TextAreaTextApi(event.currentTarget));
+    },
+    [insertUploadedImages],
+  );
 
   return (
     <div className="content-editor">
@@ -113,15 +214,24 @@ export function ContentEditor({ kind, content, categories, tags }: ContentEditor
             />
 
             <div className="content-editor-body">
-              <Editor
-                locale={zhHans}
-                mode="split"
-                onChange={setSource}
-                placeholder="从这里开始写作，支持 Markdown 语法与图片上传…"
-                plugins={plugins}
-                uploadImages={uploadImages}
+              <MDEditor
+                commands={editorCommands}
+                data-color-mode="light"
+                extraCommands={getExtraCommands()}
+                height="calc(100vh - 16rem)"
+                minHeight={512}
+                onChange={(value) => setSource(value ?? "")}
+                preview="live"
+                textareaProps={{
+                  "aria-label": `${noun}正文`,
+                  onDrop: handleImageDrop,
+                  onPaste: handleImagePaste,
+                  placeholder: "从这里开始写作，支持 Markdown 语法与图片上传…",
+                }}
                 value={source}
+                visibleDragbar
               />
+              {uploadError ? <FormMessage>{uploadError}</FormMessage> : null}
             </div>
           </div>
 
@@ -130,6 +240,7 @@ export function ContentEditor({ kind, content, categories, tags }: ContentEditor
             content={content}
             formId="content-editor-form"
             kind={kind}
+            media={availableMedia}
             onSlugChange={(nextSlug) => {
               setSlugEdited(true);
               setSlug(nextSlug);

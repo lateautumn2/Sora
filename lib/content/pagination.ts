@@ -1,5 +1,5 @@
 /** 前台列表页统一每页文章数。 */
-export const SITE_PAGE_SIZE = 10;
+export const SITE_PAGE_SIZE = 5;
 
 /**
  * 把 URL 上的 page 参数解析为合法页码（1 起）。

@@ -139,6 +139,7 @@ export const posts = sqliteTable(
     plainText: text("plain_text").notNull(),
     rendererVersion: integer("renderer_version").notNull().default(1),
     coverMediaId: text("cover_media_id").references(() => media.id, { onDelete: "set null" }),
+    coverUrl: text("cover_url"),
     status: text("status", {
       enum: ["DRAFT", "PUBLISHED", "ARCHIVED", "TRASHED"],
     })

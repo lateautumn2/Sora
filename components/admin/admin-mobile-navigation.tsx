@@ -9,9 +9,17 @@ import { useState } from "react";
 import { IconButton } from "@/components/ui/button";
 import { Tooltip } from "@/components/ui/tooltip";
 
+import { AdminAccount } from "./admin-account";
 import { adminNavigation, isAdminNavigationActive } from "./admin-navigation";
 
-export function AdminMobileNavigation() {
+interface AdminMobileNavigationProps {
+  user: {
+    email: string;
+    name: string;
+  };
+}
+
+export function AdminMobileNavigation({ user }: AdminMobileNavigationProps) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   return (
@@ -67,6 +75,7 @@ export function AdminMobileNavigation() {
               </section>
             ))}
           </nav>
+          <AdminAccount email={user.email} name={user.name} />
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>

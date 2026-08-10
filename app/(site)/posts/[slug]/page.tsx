@@ -14,10 +14,31 @@ import { PostInteractions } from "@/components/site/post-interactions";
 import { PostBackButton } from "@/components/site/post-back-button";
 import { PostContent } from "@/components/site/post-content";
 import { PostToc } from "@/components/site/post-toc";
-import { formatSoraDate, getPublishedDays } from "@/components/site/site-format";
+import { formatSoraDate, getElapsedDays } from "@/components/site/site-format";
 import { listPublicComments } from "@/lib/comments/service";
 import { getPublishedContentBySlug, getSiteSettings } from "@/lib/content/service";
 import { decodeSlugParam } from "@/lib/content/validation";
+import { getAppUrl } from "@/lib/runtime-config";
+
+const TIME_CHANGE_PHRASES = [
+  "时过境迁",
+  "沧海桑田",
+  "天翻地覆",
+  "水流花落",
+  "斗转星移",
+  "物是人非",
+  "时移世易",
+  "物换星移",
+  "春去秋来",
+] as const;
+
+function selectTimeChangePhrase(seed: string): (typeof TIME_CHANGE_PHRASES)[number] {
+  let hash = 0;
+  for (const character of seed) {
+    hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
+  }
+  return TIME_CHANGE_PHRASES[hash % TIME_CHANGE_PHRASES.length] ?? TIME_CHANGE_PHRASES[0];
+}
 
 export async function generateMetadata({
   params,
@@ -26,12 +47,14 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const post = getPublishedContentBySlug(decodeSlugParam((await params).slug), "POST");
   if (!post) return {};
+  const settings = getSiteSettings();
   return {
     title: post.seoTitle || post.title,
     description: post.seoDescription || post.excerpt,
     alternates: post.canonicalUrl ? { canonical: post.canonicalUrl } : undefined,
     openGraph: {
       type: "article",
+      siteName: settings.title,
       title: post.seoTitle || post.title,
       description: post.seoDescription || post.excerpt,
       publishedTime: post.publishedAt ? new Date(post.publishedAt).toISOString() : undefined,
@@ -48,7 +71,9 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
   }
 
   const settings = getSiteSettings();
-  const publishedDays = getPublishedDays(post.publishedAt);
+  const updatedDays = getElapsedDays(post.updatedAt);
+  const timeChangePhrase = selectTimeChangePhrase(`${post.id}:${post.updatedAt}`);
+  const postUrl = decodeURI(new URL(`/posts/${encodeURIComponent(post.slug)}`, getAppUrl()).href);
 
   return (
     <article className="sora-article">
@@ -84,7 +109,9 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
 
       <div className="sora-time-notice">
         <Clock3 aria-hidden="true" size={18} />
-        <span>本文发布于 {publishedDays} 天前，部分内容可能已经发生变化，请结合当前环境核对。</span>
+        <span>
+          本文最后更新于 {updatedDays} 天前，其中的信息可能已经{timeChangePhrase}。
+        </span>
       </div>
 
       <section className="sora-reading-surface">
@@ -95,7 +122,7 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
       <section aria-labelledby="post-license-title" className="sora-license">
         <h2 id="post-license-title">文章许可</h2>
         <p className="sora-license-title">{post.title}</p>
-        <p className="sora-license-path">/posts/{post.slug}</p>
+        <p className="sora-license-path">{postUrl}</p>
         <dl>
           <div>
             <dt>作者</dt>

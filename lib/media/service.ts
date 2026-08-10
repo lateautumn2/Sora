@@ -29,6 +29,8 @@ export interface MediaItem {
   createdAt: number;
 }
 
+export type MediaSelectionItem = Pick<MediaItem, "id" | "storageKey" | "originalName" | "altText">;
+
 export function listMedia(limit = 30, offset = 0): MediaItem[] {
   return getDatabaseConnection()
     .sqlite.prepare(
@@ -39,6 +41,15 @@ export function listMedia(limit = 30, offset = 0): MediaItem[] {
        LIMIT ? OFFSET ?`,
     )
     .all(limit, offset) as MediaItem[];
+}
+
+export function listMediaForSelection(limit = 200): MediaSelectionItem[] {
+  return getDatabaseConnection()
+    .sqlite.prepare(
+      `SELECT id, storage_key AS storageKey, original_name AS originalName, alt_text AS altText
+       FROM media ORDER BY created_at DESC LIMIT ?`,
+    )
+    .all(limit) as MediaSelectionItem[];
 }
 
 /** 统计媒体文件总数，供媒体页分页计算总页数。 */

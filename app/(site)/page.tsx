@@ -12,7 +12,9 @@ import { PostList } from "@/components/site/post-list";
 import { PostPagination } from "@/components/site/post-pagination";
 import { SiteSearch } from "@/components/site/site-search";
 import { resolveSiteNavigation } from "@/components/site/site-navigation";
+import { BilibiliIcon, WeiboIcon, XBrandIcon } from "@/components/site/social-brand-icons";
 import { resolvePage, resolveTotalPages, SITE_PAGE_SIZE } from "@/lib/content/pagination";
+import { sanitizeHomeQuote } from "@/lib/content/render";
 
 export default async function HomePage({
   searchParams,
@@ -24,6 +26,7 @@ export default async function HomePage({
   const posts = listPublishedPosts(SITE_PAGE_SIZE, (page - 1) * SITE_PAGE_SIZE);
   const totalPages = resolveTotalPages(countPublishedPosts());
   const navigation = resolveSiteNavigation(listPrimaryMenuItems());
+  const homeQuoteHtml = sanitizeHomeQuote(settings.homeQuoteHtml);
   return (
     <div className="sora-home">
       <header className="sora-home-profile">
@@ -37,6 +40,9 @@ export default async function HomePage({
         </div>
         <div className="sora-home-identity">
           <h1>{settings.title}</h1>
+          {homeQuoteHtml ? (
+            <div className="sora-home-quote" dangerouslySetInnerHTML={{ __html: homeQuoteHtml }} />
+          ) : null}
           <div className="sora-social-links">
             {settings.githubUrl ? (
               <a
@@ -47,6 +53,33 @@ export default async function HomePage({
                 title="GitHub"
               >
                 <GitFork aria-hidden="true" size={20} />
+              </a>
+            ) : null}
+            {settings.weiboUrl ? (
+              <a
+                aria-label="微博"
+                href={settings.weiboUrl}
+                rel="noreferrer"
+                target="_blank"
+                title="微博"
+              >
+                <WeiboIcon aria-hidden="true" height={19} width={19} />
+              </a>
+            ) : null}
+            {settings.bilibiliUrl ? (
+              <a
+                aria-label="B站"
+                href={settings.bilibiliUrl}
+                rel="noreferrer"
+                target="_blank"
+                title="B站"
+              >
+                <BilibiliIcon aria-hidden="true" height={19} width={19} />
+              </a>
+            ) : null}
+            {settings.xUrl ? (
+              <a aria-label="X" href={settings.xUrl} rel="noreferrer" target="_blank" title="X">
+                <XBrandIcon aria-hidden="true" height={18} width={18} />
               </a>
             ) : null}
             {settings.email ? (

@@ -571,6 +571,34 @@ input[type="file"].form-input:hover::file-selector-button {
   line-height: 1.2;
 }
 
+.sora-home-quote {
+  max-width: min(100%, 36rem);
+  margin: -0.35rem 0 0;
+  color: var(--muted);
+  font-family: var(--sora-sans);
+  font-size: 0.95rem;
+  line-height: 1.7;
+  text-align: center;
+}
+
+.sora-home-quote > :first-child {
+  margin-top: 0;
+}
+
+.sora-home-quote > :last-child {
+  margin-bottom: 0;
+}
+
+.sora-home-quote img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: 4.5rem;
+  margin-inline: auto;
+  object-fit: contain;
+}
+
 .sora-social-links {
   display: flex;
   align-items: center;
@@ -627,6 +655,7 @@ input[type="file"].form-input:hover::file-selector-button {
 
 .sora-post-card {
   position: relative;
+  overflow: hidden;
   border: 1px solid #f0f0f0;
   border-radius: 12px;
   background: #ffffff;
@@ -642,11 +671,46 @@ input[type="file"].form-input:hover::file-selector-button {
 }
 
 .sora-post-card-link {
-  display: flex;
+  display: grid;
   min-height: 7.6rem;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.sora-post-card-link.has-cover {
+  height: 10rem;
+  grid-template-columns: minmax(0, 1fr) minmax(13rem, 42%);
+}
+
+.sora-post-card-copy {
+  display: flex;
+  min-width: 0;
   flex-direction: column;
   gap: 0.5rem;
   padding: 1rem;
+}
+
+.sora-post-cover-frame {
+  position: relative;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.sora-post-cover-frame::after {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: min(5rem, 30%);
+  background: linear-gradient(90deg, #ffffff 0%, rgb(255 255 255 / 72%) 28%, transparent 100%);
+  content: "";
+  pointer-events: none;
+}
+
+.sora-post-cover {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .sora-post-card h2 {
@@ -1050,6 +1114,7 @@ input[type="file"].form-input:hover::file-selector-button {
 }
 
 .sora-post-toc a {
+  position: relative;
   overflow: hidden;
   padding-block: 0.32rem;
   color: rgb(0 0 0 / 62%);
@@ -1059,6 +1124,12 @@ input[type="file"].form-input:hover::file-selector-button {
 
 .sora-post-toc a:hover {
   color: #111111;
+}
+
+.sora-post-toc a.is-active {
+  color: #111111;
+  font-weight: 700;
+  box-shadow: -3px 0 0 var(--primary);
 }
 
 .sora-toc-level-1,
@@ -1087,8 +1158,8 @@ input[type="file"].form-input:hover::file-selector-button {
 
 .sora-license::after {
   position: absolute;
-  right: -1rem;
-  bottom: -2.5rem;
+  right: 0rem;
+  bottom: -0.5rem;
   color: rgb(0 0 0 / 7%);
   content: "CC";
   font-family: var(--sora-mono);
@@ -1121,6 +1192,7 @@ input[type="file"].form-input:hover::file-selector-button {
   margin-top: 0.2rem;
   color: var(--muted);
   font-size: 0.78rem;
+  overflow-wrap: anywhere;
 }
 
 .sora-license dl {
@@ -1501,6 +1573,28 @@ a.sora-comment-author:hover {
     min-height: 0;
   }
 
+  .sora-post-card-link.has-cover {
+    height: auto;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sora-post-cover-frame {
+    height: auto;
+    aspect-ratio: 16 / 7;
+    grid-row: 1;
+  }
+
+  .sora-post-cover-frame::after {
+    inset: auto 0 0;
+    width: auto;
+    height: 2.75rem;
+    background: linear-gradient(180deg, transparent 0%, rgb(255 255 255 / 78%) 68%, #ffffff 100%);
+  }
+
+  .sora-post-card-copy {
+    grid-row: 2;
+  }
+
   .sora-archive-year ol {
     padding-left: 0;
   }
@@ -1601,7 +1695,7 @@ a.sora-comment-author:hover {
   color: var(--muted);
 }
 
-/* 沉浸式内容编辑器（ByteMD） */
+/* 沉浸式内容编辑器 */
 .content-editor {
   width: min(100%, 64rem);
   margin-inline: auto;
@@ -1648,24 +1742,25 @@ a.sora-comment-author:hover {
   border-bottom-color: var(--primary);
 }
 
-.content-editor-body .bytemd {
+.content-editor-body .w-md-editor {
   height: calc(100vh - 16rem);
   min-height: 32rem;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
+  box-shadow: none;
 }
 
-.content-editor-body .bytemd-toolbar,
-.content-editor-body .bytemd-status {
+.content-editor-body .w-md-editor-toolbar,
+.content-editor-body .w-md-editor-content {
   background: #ffffff;
 }
 
-.content-editor-body .bytemd-toolbar-icon {
+.content-editor-body .w-md-editor-toolbar li > button {
   border-radius: 6px;
 }
 
-.content-editor-body .bytemd-toolbar-icon:hover {
+.content-editor-body .w-md-editor-toolbar li > button:hover {
   background: var(--surface-strong);
   color: var(--primary);
 }
@@ -1838,7 +1933,7 @@ a.sora-comment-author:hover {
 }
 
 @media (max-width: 40rem) {
-  .content-editor-body .bytemd {
+  .content-editor-body .w-md-editor {
     height: calc(100vh - 12rem);
     min-height: 26rem;
   }

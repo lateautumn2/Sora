@@ -1,7 +1,7 @@
 import { getSiteSettings } from "@/lib/content/service";
 import { SiteFooterNote } from "@/components/site/site-footer-note";
 
-export function SiteFooter() {
+export async function SiteFooter() {
   const settings = getSiteSettings();
   return (
     <footer className="sora-footer">
@@ -9,10 +9,7 @@ export function SiteFooter() {
         <p>
           © {new Date().getFullYear()} · {settings.authorName || settings.title}
         </p>
-        <SiteFooterNote
-          enabled={settings.footerHitokotoEnabled}
-          fallbackText={settings.footerText}
-        />
+        <SiteFooterNote fallbackText={settings.footerText} source={settings.footerQuoteSource} />
         <p>
           Powered by{" "}
           <a href="https://github.com/lateautumn2/Sora" rel="noreferrer" target="_blank">

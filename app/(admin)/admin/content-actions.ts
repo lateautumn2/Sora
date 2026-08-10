@@ -35,6 +35,8 @@ export async function saveContentAction(
     visibility: formData.get("visibility"),
     allowComment: formData.has("allowComment"),
     pinned: formData.has("pinned"),
+    coverMediaId: formData.get("coverMediaId") || undefined,
+    coverUrl: formData.get("coverUrl") || undefined,
     categoryIds: formStrings(formData, "categoryIds"),
     tagIds: formStrings(formData, "tagIds"),
     seoTitle: formData.get("seoTitle") || undefined,

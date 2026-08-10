@@ -1,21 +1,26 @@
 "use client";
 
+import { Image as ImageIcon, Images, Link2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { CategorySelect, TagMultiSelect } from "@/components/admin/taxonomy-selectors";
+import { IconButton } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog } from "@/components/ui/dialog";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { SelectField } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip } from "@/components/ui/tooltip";
 import type { ContentDetail, TaxonomyItem } from "@/lib/content/service";
+import type { MediaSelectionItem } from "@/lib/media/service";
 
 interface EditorSettingsPanelProps {
   categories: TaxonomyItem[];
   content?: ContentDetail;
   formId: string;
   kind: "POST" | "PAGE";
+  media: MediaSelectionItem[];
   onSlugChange: (value: string) => void;
   slug: string;
   tags: TaxonomyItem[];
@@ -25,6 +30,8 @@ interface EditorMetadata {
   allowComment: boolean;
   canonicalUrl: string;
   categoryId: string;
+  coverMediaId: string;
+  coverUrl: string;
   excerpt: string;
   pinned: boolean;
   seoDescription: string;
@@ -67,6 +74,8 @@ function createMetadata(content?: ContentDetail): EditorMetadata {
     allowComment: content?.allowComment ?? true,
     canonicalUrl: content?.canonicalUrl ?? "",
     categoryId: content?.categories[0]?.id ?? "",
+    coverMediaId: content?.cover?.id ?? "",
+    coverUrl: content?.cover && !content.cover.id ? content.cover.url : "",
     excerpt: content?.excerpt ?? "",
     pinned: content?.pinned ?? false,
     seoDescription: content?.seoDescription ?? "",
@@ -77,10 +86,124 @@ function createMetadata(content?: ContentDetail): EditorMetadata {
   };
 }
 
+function CoverMediaField({
+  formId,
+  media,
+  mediaId,
+  onValueChange,
+  url,
+}: {
+  formId: string;
+  media: MediaSelectionItem[];
+  mediaId: string;
+  onValueChange: (value: Pick<EditorMetadata, "coverMediaId" | "coverUrl">) => void;
+  url: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = media.find((item) => item.id === mediaId);
+  const externalUrl = /^https?:\/\/\S+$/i.test(url.trim()) ? url.trim() : "";
+  const previewUrl = selected ? `/media/${selected.storageKey}` : externalUrl;
+
+  return (
+    <Field label="文章封面">
+      <div className="editor-cover-picker">
+        <input form={formId} name="coverMediaId" type="hidden" value={mediaId} />
+        <div className="editor-cover-preview">
+          {previewUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- Covers may use local media or an administrator-provided URL.
+            <img
+              alt={selected?.altText || selected?.originalName || "文章封面预览"}
+              referrerPolicy="no-referrer"
+              src={previewUrl}
+            />
+          ) : (
+            <div className="editor-cover-empty">
+              <ImageIcon aria-hidden="true" size={20} />
+              <span>未设置封面</span>
+            </div>
+          )}
+        </div>
+        <label className="editor-cover-url-field">
+          <span>
+            <Link2 aria-hidden="true" size={14} />
+            图片 URL
+          </span>
+          <Input
+            form={formId}
+            name="coverUrl"
+            onChange={(event) => onValueChange({ coverMediaId: "", coverUrl: event.target.value })}
+            placeholder="https://example.com/cover.jpg"
+            type="url"
+            value={url}
+          />
+        </label>
+        <div className="editor-cover-actions">
+          <Dialog
+            contentClassName="editor-cover-dialog"
+            description="从媒体库中选择文章列表封面。"
+            onOpenChange={setOpen}
+            open={open}
+            title="选择文章封面"
+            trigger={
+              <>
+                <Images aria-hidden="true" size={16} />
+                选择封面
+              </>
+            }
+          >
+            {media.length > 0 ? (
+              <div className="editor-cover-media-grid">
+                {media.map((item) => (
+                  <button
+                    aria-label={`选择 ${item.originalName} 作为封面`}
+                    aria-pressed={item.id === mediaId}
+                    className={
+                      item.id === mediaId
+                        ? "editor-cover-media-option is-selected"
+                        : "editor-cover-media-option"
+                    }
+                    key={item.id}
+                    onClick={() => {
+                      onValueChange({ coverMediaId: item.id, coverUrl: "" });
+                      setOpen(false);
+                    }}
+                    type="button"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element -- Runtime media is served by the local media route. */}
+                    <img
+                      alt={item.altText || item.originalName}
+                      loading="lazy"
+                      src={`/media/${item.storageKey}`}
+                    />
+                    <span title={item.originalName}>{item.originalName}</span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="editor-cover-media-empty">媒体库暂无图片</p>
+            )}
+          </Dialog>
+          {mediaId || url ? (
+            <Tooltip content="清除封面">
+              <IconButton
+                aria-label="清除封面"
+                onClick={() => onValueChange({ coverMediaId: "", coverUrl: "" })}
+              >
+                <X aria-hidden="true" size={16} />
+              </IconButton>
+            </Tooltip>
+          ) : null}
+        </div>
+      </div>
+    </Field>
+  );
+}
+
 function EditorSettingsFields({
   categories,
   formId,
   kind,
+  media,
   metadata,
   onMetadataChange,
   onSlugChange,
@@ -134,29 +257,38 @@ function EditorSettingsFields({
       </Field>
 
       {kind === "POST" ? (
-        <fieldset className="editor-settings-panel-options">
-          <legend>文章选项</legend>
-          <label>
-            <Checkbox
-              checked={metadata.pinned}
-              className="ui-checkbox-input"
-              form={formId}
-              name="pinned"
-              onCheckedChange={(checked) => updateMetadata("pinned", checked === true)}
-            />
-            置顶文章
-          </label>
-          <label>
-            <Checkbox
-              checked={metadata.allowComment}
-              className="ui-checkbox-input"
-              form={formId}
-              name="allowComment"
-              onCheckedChange={(checked) => updateMetadata("allowComment", checked === true)}
-            />
-            允许评论
-          </label>
-        </fieldset>
+        <>
+          <CoverMediaField
+            formId={formId}
+            media={media}
+            mediaId={metadata.coverMediaId}
+            onValueChange={(value) => onMetadataChange({ ...metadata, ...value })}
+            url={metadata.coverUrl}
+          />
+          <fieldset className="editor-settings-panel-options">
+            <legend>文章选项</legend>
+            <label>
+              <Checkbox
+                checked={metadata.pinned}
+                className="ui-checkbox-input"
+                form={formId}
+                name="pinned"
+                onCheckedChange={(checked) => updateMetadata("pinned", checked === true)}
+              />
+              置顶文章
+            </label>
+            <label>
+              <Checkbox
+                checked={metadata.allowComment}
+                className="ui-checkbox-input"
+                form={formId}
+                name="allowComment"
+                onCheckedChange={(checked) => updateMetadata("allowComment", checked === true)}
+              />
+              允许评论
+            </label>
+          </fieldset>
+        </>
       ) : null}
 
       <details className="editor-settings-panel-seo">
@@ -233,6 +365,8 @@ function EditorMetadataBridge({
           {metadata.allowComment ? (
             <input form={formId} name="allowComment" type="hidden" value="on" />
           ) : null}
+          <input form={formId} name="coverMediaId" type="hidden" value={metadata.coverMediaId} />
+          <input form={formId} name="coverUrl" type="hidden" value={metadata.coverUrl} />
           <input form={formId} name="categoryIds" type="hidden" value={metadata.categoryId} />
           {metadata.tagIds.map((tagId) => (
             <input form={formId} key={tagId} name="tagIds" type="hidden" value={tagId} />

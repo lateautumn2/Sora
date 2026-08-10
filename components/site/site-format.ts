@@ -8,7 +8,7 @@ export function formatSoraDate(value: number | null): string {
   return `${year}-${month}-${day}`;
 }
 
-export function getPublishedDays(value: number | null, currentTime = Date.now()): number {
+export function getElapsedDays(value: number | null, currentTime = Date.now()): number {
   if (!value) return 0;
   return Math.max(0, Math.floor((currentTime - value) / 86_400_000));
 }

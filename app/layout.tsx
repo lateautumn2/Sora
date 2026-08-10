@@ -13,6 +13,13 @@ export function generateMetadata(): Metadata {
     metadataBase: getEnvironment().appUrl,
     title: { default: settings.title, template: `%s | ${settings.title}` },
     description: settings.description,
+    icons: { icon: settings.faviconUrl || "/icon.svg" },
+    openGraph: {
+      type: "website",
+      siteName: settings.title,
+      title: settings.title,
+      description: settings.description,
+    },
   };
 }
 

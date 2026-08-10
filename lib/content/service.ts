@@ -12,6 +12,14 @@ export interface TaxonomyItem {
   count: number;
 }
 
+export interface ContentCover {
+  id: string | null;
+  url: string;
+  storageKey: string | null;
+  originalName: string;
+  altText: string;
+}
+
 export interface ContentSummary {
   id: string;
   kind: "POST" | "PAGE";
@@ -28,6 +36,7 @@ export interface ContentSummary {
   viewCount: number;
   upvoteCount: number;
   commentCount: number;
+  cover: ContentCover | null;
   categories: TaxonomyItem[];
   tags: TaxonomyItem[];
 }
@@ -64,6 +73,11 @@ interface ContentRow {
   viewCount: number;
   upvoteCount: number;
   commentCount: number;
+  coverMediaId: string | null;
+  coverUrl: string | null;
+  coverStorageKey: string | null;
+  coverOriginalName: string | null;
+  coverAltText: string | null;
   seoTitle?: string | null;
   seoDescription?: string | null;
   canonicalUrl?: string | null;
@@ -84,7 +98,12 @@ const summaryColumns = `
   p.reading_minutes AS readingMinutes,
   p.view_count AS viewCount,
   p.upvote_count AS upvoteCount,
-  p.comment_count AS commentCount
+  p.comment_count AS commentCount,
+  p.cover_media_id AS coverMediaId,
+  p.cover_url AS coverUrl,
+  (SELECT m.storage_key FROM media m WHERE m.id = p.cover_media_id) AS coverStorageKey,
+  (SELECT m.original_name FROM media m WHERE m.id = p.cover_media_id) AS coverOriginalName,
+  (SELECT m.alt_text FROM media m WHERE m.id = p.cover_media_id) AS coverAltText
 `;
 
 const detailColumns = `
@@ -130,6 +149,23 @@ function hydrateRows(rows: ContentRow[]): ContentSummary[] {
     ...row,
     excerpt: row.excerpt ?? "",
     pinned: Boolean(row.pinned),
+    cover: row.coverUrl
+      ? {
+          id: null,
+          url: row.coverUrl,
+          storageKey: null,
+          originalName: "",
+          altText: "",
+        }
+      : row.coverMediaId && row.coverStorageKey
+        ? {
+            id: row.coverMediaId,
+            url: `/media/${row.coverStorageKey}`,
+            storageKey: row.coverStorageKey,
+            originalName: row.coverOriginalName ?? "",
+            altText: row.coverAltText ?? "",
+          }
+        : null,
     categories: categoryRows
       .filter((item) => item.postId === row.id)
       .map((item) => ({ ...item, count: 0 })),
@@ -302,6 +338,8 @@ export function saveContent(input: ContentInput): string {
       visibility: input.visibility,
       allowComment: input.allowComment ? 1 : 0,
       pinned: input.kind === "POST" && input.pinned ? 1 : 0,
+      coverMediaId: input.kind === "POST" && !input.coverUrl ? input.coverMediaId || null : null,
+      coverUrl: input.kind === "POST" ? input.coverUrl || null : null,
       publishedAt,
       now,
       wordCount: rendered.wordCount,
@@ -324,9 +362,11 @@ export function saveContent(input: ContentInput): string {
              plain_text = @plainText,
              status = @status,
              visibility = @visibility,
-             allow_comment = @allowComment,
-             pinned = @pinned,
-             published_at = @publishedAt,
+              allow_comment = @allowComment,
+              pinned = @pinned,
+              cover_media_id = @coverMediaId,
+              cover_url = @coverUrl,
+              published_at = @publishedAt,
              updated_at = @now,
              word_count = @wordCount,
              reading_minutes = @readingMinutes,
@@ -341,13 +381,13 @@ export function saveContent(input: ContentInput): string {
         .prepare(
           `INSERT INTO posts (
              id, kind, title, slug, excerpt, source_content, source_format,
-             rendered_html, plain_text, status, visibility, allow_comment,
-             pinned, published_at, created_at, updated_at, word_count,
+              rendered_html, plain_text, status, visibility, allow_comment,
+              pinned, cover_media_id, cover_url, published_at, created_at, updated_at, word_count,
              reading_minutes, seo_title, seo_description, canonical_url
            ) VALUES (
              @id, @kind, @title, @slug, @excerpt, @sourceContent, @sourceFormat,
-             @renderedHtml, @plainText, @status, @visibility, @allowComment,
-             @pinned, @publishedAt, @now, @now, @wordCount,
+              @renderedHtml, @plainText, @status, @visibility, @allowComment,
+              @pinned, @coverMediaId, @coverUrl, @publishedAt, @now, @now, @wordCount,
              @readingMinutes, @seoTitle, @seoDescription, @canonicalUrl
            )`,
         )
@@ -629,6 +669,19 @@ export function deleteTaxonomy(type: "category" | "tag", id: string): void {
 
 export const defaultSiteSettings: SiteSettings = siteSettingsSchema.parse({});
 
+function parseSiteSettings(value: unknown): SiteSettings {
+  if (!value || typeof value !== "object") {
+    return siteSettingsSchema.parse(value);
+  }
+
+  const stored = value as Record<string, unknown>;
+  return siteSettingsSchema.parse({
+    ...stored,
+    footerQuoteSource:
+      stored.footerQuoteSource ?? (stored.footerHitokotoEnabled === true ? "HITOKOTO" : "NONE"),
+  });
+}
+
 export function getSiteSettings(): SiteSettings {
   // Next.js 构建阶段（next build）会预渲染 /_not-found 等静态页面并调用本函数，
   // 此时运行库尚未建表。直接返回默认值，避免镜像构建依赖运行时数据库。
@@ -644,7 +697,7 @@ export function getSiteSettings(): SiteSettings {
   }
 
   try {
-    return siteSettingsSchema.parse(JSON.parse(row.valueJson));
+    return parseSiteSettings(JSON.parse(row.valueJson));
   } catch {
     return defaultSiteSettings;
   }
