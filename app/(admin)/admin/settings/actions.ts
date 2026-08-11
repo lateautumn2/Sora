@@ -25,12 +25,21 @@ export type SiteSettingsField =
   | "bilibiliUrl"
   | "xUrl"
   | "footerText"
-  | "footerQuoteSource";
+  | "footerQuoteSource"
+  | "coverSources";
 export type SiteSettingsActionState = FormActionState<SiteSettingsField>;
 export type RuntimeConfigActionState = FormActionState<"appUrl" | "trustedOrigins">;
 export type PasswordActionState = FormActionState<
   "currentPassword" | "newPassword" | "confirmPassword"
 >;
+
+function parseCoverSources(value: FormDataEntryValue | null): unknown {
+  try {
+    return JSON.parse(typeof value === "string" ? value : "[]");
+  } catch {
+    return null;
+  }
+}
 
 export async function saveSiteSettingsAction(
   _previousState: SiteSettingsActionState,
@@ -52,6 +61,7 @@ export async function saveSiteSettingsAction(
     xUrl: formData.get("xUrl"),
     footerText: formData.get("footerText"),
     footerQuoteSource: formData.get("footerQuoteSource"),
+    coverSources: parseCoverSources(formData.get("coverSourcesJson")),
     allowComments: formData.get("allowComments") === "on",
     requireCommentModeration: formData.get("requireCommentModeration") === "on",
   });
@@ -74,6 +84,7 @@ export async function saveSiteSettingsAction(
         xUrl: fields.xUrl?.[0],
         footerText: fields.footerText?.[0],
         footerQuoteSource: fields.footerQuoteSource?.[0],
+        coverSources: fields.coverSources?.[0],
       },
     };
   }

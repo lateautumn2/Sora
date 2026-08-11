@@ -5,7 +5,7 @@ import { countAdminContents, listAdminContents } from "@/lib/content/service";
 export default async function AdminPagesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; status?: string }>;
+  searchParams: Promise<{ notice?: string; page?: string; status?: string }>;
 }) {
   const query = await searchParams;
   const showTrash = query.status === "TRASHED";
@@ -17,6 +17,7 @@ export default async function AdminPagesPage({
     <ContentList
       items={listAdminContents("PAGE", pageSize, (page - 1) * pageSize, status)}
       kind="PAGE"
+      notice={query.notice}
       page={page}
       showTrash={showTrash}
       totalPages={resolveTotalPages(total, pageSize)}

@@ -28,7 +28,6 @@ export const contentInputSchema = z.object({
   sourceContent: z.string().min(1, "请输入正文").max(2_000_000, "正文内容过长"),
   sourceFormat: z.enum(["MARKDOWN", "HTML"]).default("MARKDOWN"),
   status: contentStatusSchema,
-  visibility: z.enum(["PUBLIC", "PRIVATE"]),
   allowComment: z.boolean(),
   pinned: z.boolean(),
   coverMediaId: z.union([z.literal(""), storedIdentifierSchema]).optional(),
@@ -91,8 +90,26 @@ export const siteSettingsSchema = z.object({
   xUrl: z.union([z.literal(""), z.string().url()]).default(""),
   footerText: z.string().trim().max(160).default("内容优先，保持克制。"),
   footerQuoteSource: z.enum(["NONE", "HITOKOTO", "GUSHI"]).default("NONE"),
+  coverSources: z
+    .array(
+      z.object({
+        name: z.string().trim().min(1, "请输入封面来源名称").max(60),
+        url: z
+          .string()
+          .trim()
+          .url("封面来源 URL 格式不正确")
+          .refine((value) => /^https?:\/\//i.test(value), "封面来源仅支持 HTTP(S)"),
+      }),
+    )
+    .max(20, "封面来源不能超过 20 个")
+    .refine(
+      (sources) => new Set(sources.map((source) => source.url)).size === sources.length,
+      "封面来源 URL 不能重复",
+    )
+    .default([]),
   allowComments: z.boolean().default(true),
   requireCommentModeration: z.boolean().default(true),
 });
 
 export type SiteSettings = z.infer<typeof siteSettingsSchema>;
+export type CoverSource = SiteSettings["coverSources"][number];

@@ -25,10 +25,10 @@
   --content-width: 72rem;
   --sora-reading-width: 50rem;
   --sora-list-width: 48rem;
-  --sora-sans: "HarmonyOS Sans SC", ui-sans-serif, sans-serif;
-  --sora-serif: "Noto Serif CJK", ui-serif, serif;
+  --sora-sans: "Maple Mono NF CN", ui-monospace, monospace;
+  --sora-serif: "Maple Mono NF CN", ui-monospace, monospace;
   --sora-mono: "Maple Mono NF CN", ui-monospace, monospace;
-  --sora-semi-serif: "LXGW WenKai", ui-serif, serif;
+  --sora-semi-serif: "Maple Mono NF CN", ui-monospace, monospace;
 }
 
 * {

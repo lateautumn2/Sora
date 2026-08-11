@@ -8,6 +8,7 @@ import { AdminPage, AdminPageHeader } from "@/components/admin/admin-page";
 import { AdminSurface } from "@/components/admin/admin-surface";
 import { AdminTabs } from "@/components/admin/admin-tabs";
 import { AdminToolbar } from "@/components/admin/admin-toolbar";
+import { AdminNoticeToast } from "@/components/admin/admin-notice-toast";
 import { IconButton } from "@/components/ui/button";
 import { Tooltip } from "@/components/ui/tooltip";
 import { PostPagination } from "@/components/site/post-pagination";
@@ -23,12 +24,14 @@ const statusLabels = {
 export function ContentList({
   kind,
   items,
+  notice,
   page,
   showTrash = false,
   totalPages,
 }: {
   kind: "POST" | "PAGE";
   items: ContentSummary[];
+  notice?: string;
   page?: number;
   showTrash?: boolean;
   totalPages?: number;
@@ -52,14 +55,9 @@ export function ContentList({
       key: "status",
       label: "状态",
       render: (item) => (
-        <div className="admin-status-stack">
-          <span className={`admin-status admin-status-${item.status.toLowerCase()}`}>
-            {statusLabels[item.status]}
-          </span>
-          {item.visibility === "PRIVATE" ? (
-            <span className="admin-status admin-status-private">私密</span>
-          ) : null}
-        </div>
+        <span className={`admin-status admin-status-${item.status.toLowerCase()}`}>
+          {statusLabels[item.status]}
+        </span>
       ),
     },
     {
@@ -114,6 +112,7 @@ export function ContentList({
 
   return (
     <AdminPage>
+      <AdminNoticeToast notice={notice} noun={noun} />
       <AdminPageHeader
         actions={
           <Link className="ui-button ui-button-link" href={`/admin/${segment}/new`}>

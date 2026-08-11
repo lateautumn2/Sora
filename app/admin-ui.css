@@ -2025,6 +2025,39 @@
   gap: 1rem;
 }
 
+.settings-cover-sources {
+  display: grid;
+  min-width: 0;
+  gap: 0.75rem;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.settings-cover-sources legend {
+  padding: 0;
+  color: var(--admin-text);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.settings-cover-source-list {
+  display: grid;
+  gap: 0.625rem;
+}
+
+.settings-cover-source-row {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(8rem, 0.7fr) minmax(12rem, 1.3fr) auto;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.settings-cover-source-add {
+  justify-self: start;
+}
+
 @media (max-width: 75rem) {
   .admin-dashboard-grid {
     grid-template-columns: minmax(0, 1fr);
@@ -2066,6 +2099,14 @@
 
   .settings-form-two-columns {
     grid-template-columns: 1fr;
+  }
+
+  .settings-cover-source-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .settings-cover-source-row .ui-input:first-child {
+    grid-column: 1 / -1;
   }
 
   .admin-dashboard-stats,

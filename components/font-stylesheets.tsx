@@ -1,8 +1,4 @@
-const FONT_STYLESHEETS = [
-  { name: "Noto Serif CJK", id: 285 },
-  { name: "LXGW WenKai", id: 292 },
-  { name: "Maple Mono NF CN", id: 442 },
-] as const;
+const FONT_STYLESHEETS = [{ name: "Maple Mono NF CN", id: 442 }] as const;
 
 const FONT_FALLBACK_SCRIPT = `
 window.addEventListener("error", function (event) {

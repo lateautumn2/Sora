@@ -32,7 +32,6 @@ export async function saveContentAction(
     sourceContent: formData.get("sourceContent"),
     sourceFormat: formData.get("sourceFormat") === "HTML" ? "HTML" : "MARKDOWN",
     status: formData.get("status"),
-    visibility: formData.get("visibility"),
     allowComment: formData.has("allowComment"),
     pinned: formData.has("pinned"),
     coverMediaId: formData.get("coverMediaId") || undefined,
@@ -51,9 +50,8 @@ export async function saveContentAction(
     };
   }
 
-  let id: string;
   try {
-    id = saveContent(result.data);
+    saveContent(result.data);
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
     if (message.includes("posts.slug") || message.includes("UNIQUE constraint failed")) {
@@ -63,7 +61,7 @@ export async function saveContentAction(
   }
 
   revalidatePath("/", "layout");
-  redirect(`/admin/${kind === "POST" ? "posts" : "pages"}/${id}?saved=1`);
+  redirect(`/admin/${kind === "POST" ? "posts" : "pages"}?notice=saved`);
 }
 
 export async function trashContentAction(formData: FormData): Promise<never> {

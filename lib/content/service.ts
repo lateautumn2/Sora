@@ -335,7 +335,7 @@ export function saveContent(input: ContentInput): string {
       renderedHtml: rendered.html,
       plainText: rendered.plainText,
       status: input.status,
-      visibility: input.visibility,
+      visibility: "PUBLIC" as const,
       allowComment: input.allowComment ? 1 : 0,
       pinned: input.kind === "POST" && input.pinned ? 1 : 0,
       coverMediaId: input.kind === "POST" && !input.coverUrl ? input.coverMediaId || null : null,

@@ -7,7 +7,7 @@ const POSTS_PAGE_SIZE = 10;
 export default async function AdminPostsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; status?: string }>;
+  searchParams: Promise<{ notice?: string; page?: string; status?: string }>;
 }) {
   const query = await searchParams;
   const showTrash = query.status === "TRASHED";
@@ -18,6 +18,7 @@ export default async function AdminPostsPage({
     <ContentList
       items={listAdminContents("POST", POSTS_PAGE_SIZE, (page - 1) * POSTS_PAGE_SIZE, status)}
       kind="POST"
+      notice={query.notice}
       page={page}
       showTrash={showTrash}
       totalPages={resolveTotalPages(total, POSTS_PAGE_SIZE)}

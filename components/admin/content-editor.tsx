@@ -6,7 +6,15 @@ import "@uiw/react-md-editor/markdown-editor.css";
 import { ArrowLeft, ImagePlus, Save, Trash2 } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useActionState, useCallback, useMemo, useState, type DragEvent } from "react";
+import {
+  useActionState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type DragEvent,
+} from "react";
 
 import {
   saveContentAction,
@@ -17,14 +25,17 @@ import { EditorSettingsPanel } from "@/components/admin/editor-settings-panel";
 import { AdminToolbar } from "@/components/admin/admin-toolbar";
 import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form-message";
+import { useToast } from "@/components/ui/toast";
 import type { ContentDetail, TaxonomyItem } from "@/lib/content/service";
 import { normalizeSlug } from "@/lib/content/validation";
+import type { CoverSource } from "@/lib/content/validation";
 import type { MediaSelectionItem } from "@/lib/media/service";
 
 interface ContentEditorProps {
   kind: "POST" | "PAGE";
   content?: ContentDetail;
   categories: TaxonomyItem[];
+  coverSources?: CoverSource[];
   media?: MediaSelectionItem[];
   tags: TaxonomyItem[];
 }
@@ -44,8 +55,17 @@ const MDEditor = dynamic<MDEditorProps>(
  * 编辑器主区只保留标题和 Markdown 编辑器，避免设置字段打断写作。
  * 设置字段由 EditorSettingsPanel 管理；移动端 Portal 中的字段通过 form 属性关联本表单。
  */
-export function ContentEditor({ kind, content, categories, media = [], tags }: ContentEditorProps) {
+export function ContentEditor({
+  kind,
+  content,
+  categories,
+  coverSources = [],
+  media = [],
+  tags,
+}: ContentEditorProps) {
   const [state, formAction, pending] = useActionState(saveContentAction, initialState);
+  const { toast } = useToast();
+  const handledErrorState = useRef<ContentActionState | null>(null);
   const [title, setTitle] = useState(content?.title ?? "");
   const [slug, setSlug] = useState(content?.slug ?? "");
   const [slugEdited, setSlugEdited] = useState(Boolean(content?.slug));
@@ -53,6 +73,17 @@ export function ContentEditor({ kind, content, categories, media = [], tags }: C
   const [uploadError, setUploadError] = useState("");
   const noun = kind === "POST" ? "文章" : "页面";
   const listHref = kind === "POST" ? "/admin/posts" : "/admin/pages";
+
+  useEffect(() => {
+    if (state.status !== "error" || handledErrorState.current === state) return;
+    handledErrorState.current = state;
+
+    toast({
+      title: `${noun}保存失败`,
+      description: state.formError ?? "请检查表单内容",
+    });
+  }, [noun, state, toast]);
+
   const availableMedia = useMemo(() => {
     if (
       !content?.cover?.id ||
@@ -238,6 +269,7 @@ export function ContentEditor({ kind, content, categories, media = [], tags }: C
           <EditorSettingsPanel
             categories={categories}
             content={content}
+            coverSources={coverSources}
             formId="content-editor-form"
             kind={kind}
             media={availableMedia}

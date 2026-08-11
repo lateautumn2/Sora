@@ -1,7 +1,7 @@
 "use client";
 
-import { LoaderCircle, Save } from "lucide-react";
-import { useActionState } from "react";
+import { LoaderCircle, Plus, Save, Trash2 } from "lucide-react";
+import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 
 import {
@@ -13,7 +13,7 @@ import {
   type SiteSettingsActionState,
 } from "@/app/(admin)/admin/settings/actions";
 import { AdminSurface } from "@/components/admin/admin-surface";
-import { Button } from "@/components/ui/button";
+import { Button, IconButton } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field } from "@/components/ui/field";
 import { FormMessage } from "@/components/ui/form-message";
@@ -21,7 +21,8 @@ import { Input } from "@/components/ui/input";
 import { SelectField } from "@/components/ui/select";
 import { Tabs } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import type { SiteSettings } from "@/lib/content/validation";
+import { Tooltip } from "@/components/ui/tooltip";
+import type { CoverSource, SiteSettings } from "@/lib/content/validation";
 import type { RuntimeConfig } from "@/lib/runtime-config";
 
 interface SettingsFormProps {
@@ -48,6 +49,81 @@ function SubmitButton({ children }: { children: string }) {
   );
 }
 
+function CoverSourcesField({
+  error,
+  initialSources,
+}: {
+  error?: string;
+  initialSources: CoverSource[];
+}) {
+  const [sources, setSources] = useState(() =>
+    initialSources.map((source, index) => ({ ...source, key: `stored-${index}` })),
+  );
+
+  return (
+    <fieldset className="settings-cover-sources">
+      <legend>封面来源</legend>
+      <input
+        name="coverSourcesJson"
+        type="hidden"
+        value={JSON.stringify(sources.map(({ name, url }) => ({ name, url })))}
+      />
+      <div className="settings-cover-source-list">
+        {sources.map((source, index) => (
+          <div className="settings-cover-source-row" key={source.key}>
+            <Input
+              aria-label={`封面来源 ${index + 1} 名称`}
+              onChange={(event) =>
+                setSources((current) =>
+                  current.map((item) =>
+                    item.key === source.key ? { ...item, name: event.target.value } : item,
+                  ),
+                )
+              }
+              placeholder="来源名称"
+              value={source.name}
+            />
+            <Input
+              aria-label={`封面来源 ${index + 1} API URL`}
+              onChange={(event) =>
+                setSources((current) =>
+                  current.map((item) =>
+                    item.key === source.key ? { ...item, url: event.target.value } : item,
+                  ),
+                )
+              }
+              placeholder="https://example.com/random-image"
+              type="url"
+              value={source.url}
+            />
+            <Tooltip content="删除来源">
+              <IconButton
+                aria-label={`删除封面来源 ${source.name || index + 1}`}
+                onClick={() =>
+                  setSources((current) => current.filter((item) => item.key !== source.key))
+                }
+              >
+                <Trash2 aria-hidden="true" size={16} />
+              </IconButton>
+            </Tooltip>
+          </div>
+        ))}
+      </div>
+      {error ? <FormMessage>{error}</FormMessage> : null}
+      <Button
+        className="settings-cover-source-add"
+        onClick={() =>
+          setSources((current) => [...current, { key: crypto.randomUUID(), name: "", url: "" }])
+        }
+        type="button"
+      >
+        <Plus aria-hidden="true" size={16} />
+        添加来源
+      </Button>
+    </fieldset>
+  );
+}
+
 function SiteSettingsHiddenFields({
   includeCommentSettings = true,
   settings,
@@ -70,6 +146,7 @@ function SiteSettingsHiddenFields({
       <input name="xUrl" type="hidden" value={settings.xUrl} />
       <input name="footerText" type="hidden" value={settings.footerText} />
       <input name="footerQuoteSource" type="hidden" value={settings.footerQuoteSource} />
+      <input name="coverSourcesJson" type="hidden" value={JSON.stringify(settings.coverSources)} />
       {includeCommentSettings && settings.allowComments ? (
         <input name="allowComments" type="hidden" value="on" />
       ) : null}
@@ -168,6 +245,10 @@ export function SettingsForm({ runtimeConfig, settings }: SettingsFormProps) {
                     { value: "HITOKOTO", label: "一言" },
                     { value: "GUSHI", label: "古诗词" },
                   ]}
+                />
+                <CoverSourcesField
+                  error={siteState.fieldErrors?.coverSources}
+                  initialSources={settings.coverSources}
                 />
                 <SubmitButton>保存设置</SubmitButton>
               </form>

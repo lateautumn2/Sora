@@ -14,11 +14,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tooltip } from "@/components/ui/tooltip";
 import { resolveCoverImageUrl } from "@/lib/content/cover-image";
 import type { ContentDetail, TaxonomyItem } from "@/lib/content/service";
+import type { CoverSource } from "@/lib/content/validation";
 import type { MediaSelectionItem } from "@/lib/media/service";
 
 interface EditorSettingsPanelProps {
   categories: TaxonomyItem[];
   content?: ContentDetail;
+  coverSources: CoverSource[];
   formId: string;
   kind: "POST" | "PAGE";
   media: MediaSelectionItem[];
@@ -39,18 +41,12 @@ interface EditorMetadata {
   seoTitle: string;
   status: string;
   tagIds: string[];
-  visibility: string;
 }
 
 const statusOptions = [
   { value: "DRAFT", label: "草稿" },
   { value: "PUBLISHED", label: "已发布" },
   { value: "ARCHIVED", label: "已归档" },
-];
-
-const visibilityOptions = [
-  { value: "PUBLIC", label: "公开" },
-  { value: "PRIVATE", label: "私有" },
 ];
 
 function useMobileLayout() {
@@ -83,11 +79,11 @@ function createMetadata(content?: ContentDetail): EditorMetadata {
     seoTitle: content?.seoTitle ?? "",
     status: content?.status ?? "DRAFT",
     tagIds: content?.tags.map((tag) => tag.id) ?? [],
-    visibility: content?.visibility ?? "PUBLIC",
   };
 }
 
 function CoverMediaField({
+  coverSources,
   formId,
   media,
   mediaId,
@@ -95,6 +91,7 @@ function CoverMediaField({
   requestIdentity,
   url,
 }: {
+  coverSources: CoverSource[];
   formId: string;
   media: MediaSelectionItem[];
   mediaId: string;
@@ -108,6 +105,7 @@ function CoverMediaField({
   const previewUrl = selected
     ? `/media/${selected.storageKey}`
     : resolveCoverImageUrl(externalUrl, requestIdentity);
+  const selectedSource = coverSources.some((source) => source.url === url) ? url : "";
 
   return (
     <Field label="文章封面">
@@ -128,6 +126,16 @@ function CoverMediaField({
             </div>
           )}
         </div>
+        {coverSources.length > 0 ? (
+          <SelectField
+            label="API 来源"
+            name="coverSourcePreset"
+            onValueChange={(value) => onValueChange({ coverMediaId: "", coverUrl: value })}
+            options={coverSources.map((source) => ({ label: source.name, value: source.url }))}
+            placeholder="选择封面 API"
+            value={selectedSource}
+          />
+        ) : null}
         <label className="editor-cover-url-field">
           <span>
             <Link2 aria-hidden="true" size={14} />
@@ -206,6 +214,7 @@ function CoverMediaField({
 
 function EditorSettingsFields({
   categories,
+  coverSources,
   formId,
   kind,
   media,
@@ -234,14 +243,6 @@ function EditorSettingsFields({
         options={statusOptions}
         value={metadata.status}
       />
-      <SelectField
-        form={formId}
-        label="可见性"
-        name="visibility"
-        onValueChange={(value) => updateMetadata("visibility", value)}
-        options={visibilityOptions}
-        value={metadata.visibility}
-      />
       <Field label="URL 别名">
         <Input
           form={formId}
@@ -266,6 +267,7 @@ function EditorSettingsFields({
       {kind === "POST" ? (
         <>
           <CoverMediaField
+            coverSources={coverSources}
             formId={formId}
             media={media}
             mediaId={metadata.coverMediaId}
@@ -361,7 +363,6 @@ function EditorMetadataBridge({
   return (
     <>
       <input form={formId} name="status" type="hidden" value={metadata.status} />
-      <input form={formId} name="visibility" type="hidden" value={metadata.visibility} />
       <input form={formId} name="slug" type="hidden" value={slug} />
       <input form={formId} name="excerpt" type="hidden" value={metadata.excerpt} />
       <input form={formId} name="seoTitle" type="hidden" value={metadata.seoTitle} />

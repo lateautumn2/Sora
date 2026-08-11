@@ -24,7 +24,13 @@ export function AdminAccount({ email, name }: AdminAccountProps) {
       </div>
       <div className="admin-navigation-account-actions">
         <Tooltip content="查看站点">
-          <Link aria-label="查看站点" className="admin-navigation-account-link" href="/">
+          <Link
+            aria-label="查看站点"
+            className="admin-navigation-account-link"
+            href="/"
+            rel="noreferrer"
+            target="_blank"
+          >
             <ExternalLink aria-hidden="true" size={16} />
           </Link>
         </Tooltip>
