@@ -307,6 +307,10 @@ export function getAdminContentById(id: string): ContentDetail | null {
   return hydrateDetail(row);
 }
 
+function normalizeSourceLineEndings(source: string): string {
+  return source.replace(/\r\n?/g, "\n");
+}
+
 export function saveContent(input: ContentInput): string {
   const sqlite = getDatabaseConnection().sqlite;
   const rendered = renderContent(input.sourceContent, input.sourceFormat, input.excerpt);
@@ -316,14 +320,34 @@ export function saveContent(input: ContentInput): string {
     const id = input.id ?? randomUUID();
     const existing = input.id
       ? (sqlite
-          .prepare("SELECT published_at AS publishedAt FROM posts WHERE id = ?")
-          .get(input.id) as { publishedAt: number | null } | undefined)
+          .prepare(
+            `SELECT published_at AS publishedAt,
+                    source_content AS sourceContent,
+                    source_format AS sourceFormat,
+                    updated_at AS updatedAt
+             FROM posts
+             WHERE id = ?`,
+          )
+          .get(input.id) as
+          | {
+              publishedAt: number | null;
+              sourceContent: string;
+              sourceFormat: "MARKDOWN" | "HTML";
+              updatedAt: number;
+            }
+          | undefined)
       : undefined;
     if (input.id && !existing) {
       throw new Error("CONTENT_NOT_FOUND");
     }
 
     const publishedAt = input.status === "PUBLISHED" ? (existing?.publishedAt ?? now) : null;
+    const sourceChanged =
+      !existing ||
+      existing.sourceFormat !== input.sourceFormat ||
+      normalizeSourceLineEndings(existing.sourceContent) !==
+        normalizeSourceLineEndings(input.sourceContent);
+    const updatedAt = sourceChanged ? now : existing.updatedAt;
     const values = {
       id,
       kind: input.kind,
@@ -342,6 +366,7 @@ export function saveContent(input: ContentInput): string {
       coverUrl: input.kind === "POST" ? input.coverUrl || null : null,
       publishedAt,
       now,
+      updatedAt,
       wordCount: rendered.wordCount,
       readingMinutes: rendered.readingMinutes,
       seoTitle: input.seoTitle || null,
@@ -367,7 +392,7 @@ export function saveContent(input: ContentInput): string {
               cover_media_id = @coverMediaId,
               cover_url = @coverUrl,
               published_at = @publishedAt,
-             updated_at = @now,
+             updated_at = @updatedAt,
              word_count = @wordCount,
              reading_minutes = @readingMinutes,
              seo_title = @seoTitle,
@@ -387,7 +412,7 @@ export function saveContent(input: ContentInput): string {
            ) VALUES (
              @id, @kind, @title, @slug, @excerpt, @sourceContent, @sourceFormat,
               @renderedHtml, @plainText, @status, @visibility, @allowComment,
-              @pinned, @coverMediaId, @coverUrl, @publishedAt, @now, @now, @wordCount,
+             @pinned, @coverMediaId, @coverUrl, @publishedAt, @now, @updatedAt, @wordCount,
              @readingMinutes, @seoTitle, @seoDescription, @canonicalUrl
            )`,
         )
