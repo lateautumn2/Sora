@@ -3,6 +3,7 @@ import { Readable } from "node:stream";
 
 import { archiveReadStream } from "@/lib/data/archive";
 import { dataApiErrorResponse, requireAdminApiRequest } from "@/lib/data/api";
+import { operationActions, recordOperation } from "@/lib/auth/operation-log";
 import { createFullBackupExport } from "@/lib/data/backups";
 
 export const dynamic = "force-dynamic";
@@ -10,8 +11,14 @@ export const runtime = "nodejs";
 
 export async function GET(request: Request): Promise<Response> {
   try {
-    await requireAdminApiRequest(request);
+    const session = await requireAdminApiRequest(request);
     const backup = await createFullBackupExport();
+    await recordOperation({
+      action: operationActions.DATA_EXPORT,
+      actor: session.user,
+      metadata: { fileName: backup.fileName },
+      targetType: "BACKUP",
+    });
     const bytes = (await stat(backup.archivePath)).size;
     const source = archiveReadStream(backup.archivePath);
     source.once("close", () => {

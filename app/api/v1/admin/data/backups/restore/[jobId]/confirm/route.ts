@@ -1,4 +1,5 @@
 import { dataApiErrorResponse, DataApiError, requireAdminApiRequest } from "@/lib/data/api";
+import { operationActions, recordOperation } from "@/lib/auth/operation-log";
 import { requestFullBackupRestore } from "@/lib/data/backups";
 import { getEnvironment } from "@/lib/env";
 
@@ -10,12 +11,20 @@ export async function POST(
   { params }: { params: Promise<{ jobId: string }> },
 ): Promise<Response> {
   try {
-    await requireAdminApiRequest(request);
+    const session = await requireAdminApiRequest(request);
     const body = (await request.json().catch(() => null)) as { confirmation?: unknown } | null;
     if (body?.confirmation !== "RESTORE") {
       throw new DataApiError("RESTORE_CONFIRMATION_REQUIRED", "请输入 RESTORE 确认完整恢复", 422);
     }
-    const job = await requestFullBackupRestore((await params).jobId);
+    const jobId = (await params).jobId;
+    const job = await requestFullBackupRestore(jobId);
+    await recordOperation({
+      action: operationActions.DATA_RESTORE,
+      actor: session.user,
+      metadata: { stage: "restore", state: job.state },
+      targetId: jobId,
+      targetType: "BACKUP",
+    });
     const production = getEnvironment().nodeEnv === "production";
     if (production) {
       setTimeout(() => process.kill(process.pid, "SIGTERM"), 1500).unref();

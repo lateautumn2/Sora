@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { requireAdminSession } from "@/lib/auth/admin";
+import { operationActions, recordOperation } from "@/lib/auth/operation-log";
 import { deleteTaxonomy, saveTaxonomy } from "@/lib/content/service";
 import { normalizeSlug, taxonomyInputSchema } from "@/lib/content/validation";
 import type { FormActionState } from "@/lib/forms/action-state";
@@ -16,7 +17,7 @@ async function save(
   _previousState: TaxonomyActionState,
   formData: FormData,
 ): Promise<TaxonomyActionState> {
-  await requireAdminSession();
+  const session = await requireAdminSession();
   const segment = type === "category" ? "categories" : "tags";
   const result = taxonomyInputSchema.safeParse({
     id: formData.get("id") || undefined,
@@ -39,7 +40,14 @@ async function save(
   }
 
   try {
-    saveTaxonomy(type, result.data);
+    const id = saveTaxonomy(type, result.data);
+    await recordOperation({
+      action: result.data.id ? operationActions.UPDATE : operationActions.CREATE,
+      actor: session.user,
+      metadata: { name: result.data.name, type },
+      targetId: id,
+      targetType: type.toUpperCase(),
+    });
   } catch {
     return {
       status: "error",
@@ -56,7 +64,7 @@ async function remove(
   _previousState: TaxonomyActionState,
   formData: FormData,
 ): Promise<TaxonomyActionState> {
-  await requireAdminSession();
+  const session = await requireAdminSession();
   const segment = type === "category" ? "categories" : "tags";
   const id = z.string().uuid().safeParse(formData.get("id"));
   if (!id.success) {
@@ -64,6 +72,13 @@ async function remove(
   }
   try {
     deleteTaxonomy(type, id.data);
+    await recordOperation({
+      action: operationActions.DELETE,
+      actor: session.user,
+      metadata: { type },
+      targetId: id.data,
+      targetType: type.toUpperCase(),
+    });
   } catch {
     return {
       status: "error",

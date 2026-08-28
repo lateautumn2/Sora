@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { requireAdminSession } from "@/lib/auth/admin";
+import { operationActions, recordOperation } from "@/lib/auth/operation-log";
 import { restoreContent, saveContent, trashContent } from "@/lib/content/service";
 import { contentInputSchema, normalizeSlug } from "@/lib/content/validation";
 import type { FormActionState } from "@/lib/forms/action-state";
@@ -20,7 +21,7 @@ export async function saveContentAction(
   _previousState: ContentActionState,
   formData: FormData,
 ): Promise<ContentActionState> {
-  await requireAdminSession();
+  const session = await requireAdminSession();
 
   const kind = formData.get("kind") === "PAGE" ? "PAGE" : "POST";
   const result = contentInputSchema.safeParse({
@@ -51,7 +52,14 @@ export async function saveContentAction(
   }
 
   try {
-    saveContent(result.data);
+    const contentId = saveContent(result.data);
+    await recordOperation({
+      action: result.data.id ? operationActions.UPDATE : operationActions.CREATE,
+      actor: session.user,
+      metadata: { kind, title: result.data.title },
+      targetId: contentId,
+      targetType: kind,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
     if (message.includes("posts.slug") || message.includes("UNIQUE constraint failed")) {
@@ -65,22 +73,34 @@ export async function saveContentAction(
 }
 
 export async function trashContentAction(formData: FormData): Promise<never> {
-  await requireAdminSession();
+  const session = await requireAdminSession();
   const id = String(formData.get("id") ?? "");
   const kind = formData.get("kind") === "PAGE" ? "PAGE" : "POST";
   if (id) {
     trashContent(id);
+    await recordOperation({
+      action: operationActions.TRASH,
+      actor: session.user,
+      targetId: id,
+      targetType: kind,
+    });
     revalidatePath("/", "layout");
   }
   redirect(`/admin/${kind === "POST" ? "posts" : "pages"}`);
 }
 
 export async function restoreContentAction(formData: FormData): Promise<never> {
-  await requireAdminSession();
+  const session = await requireAdminSession();
   const id = String(formData.get("id") ?? "");
   const kind = formData.get("kind") === "PAGE" ? "PAGE" : "POST";
   if (id) {
     restoreContent(id);
+    await recordOperation({
+      action: operationActions.RESTORE,
+      actor: session.user,
+      targetId: id,
+      targetType: kind,
+    });
     revalidatePath("/", "layout");
   }
   redirect(`/admin/${kind === "POST" ? "posts" : "pages"}?status=TRASHED`);

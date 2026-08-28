@@ -64,6 +64,13 @@
       "when": 1786355045881,
       "tag": "0008_post_cover_url",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1787907330954,
+      "tag": "0009_operation_logs",
+      "breakpoints": true
     }
   ]
 }

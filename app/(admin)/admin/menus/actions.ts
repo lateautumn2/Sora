@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { requireAdminSession } from "@/lib/auth/admin";
+import { operationActions, recordOperation } from "@/lib/auth/operation-log";
 import { deletePrimaryMenuItem, savePrimaryMenuItem } from "@/lib/content/service";
 import type { FormActionState } from "@/lib/forms/action-state";
 
@@ -29,7 +30,7 @@ export async function saveMenuItemAction(
   _previousState: MenuItemActionState,
   formData: FormData,
 ): Promise<MenuItemActionState> {
-  await requireAdminSession();
+  const session = await requireAdminSession();
   const result = menuItemSchema.safeParse({
     id: formData.get("id") || undefined,
     label: formData.get("label"),
@@ -51,7 +52,14 @@ export async function saveMenuItemAction(
       },
     };
   }
-  savePrimaryMenuItem(result.data);
+  const id = savePrimaryMenuItem(result.data);
+  await recordOperation({
+    action: result.data.id ? operationActions.UPDATE : operationActions.CREATE,
+    actor: session.user,
+    metadata: { label: result.data.label },
+    targetId: id,
+    targetType: "MENU_ITEM",
+  });
   revalidatePath("/", "layout");
   redirect("/admin/menus?notice=saved");
 }
@@ -60,12 +68,18 @@ export async function deleteMenuItemAction(
   _previousState: MenuItemActionState,
   formData: FormData,
 ): Promise<MenuItemActionState> {
-  await requireAdminSession();
+  const session = await requireAdminSession();
   const id = z.string().uuid().safeParse(formData.get("id"));
   if (!id.success) {
     return { status: "error", fieldErrors: { id: "菜单项不存在。" }, formError: "删除失败。" };
   }
   deletePrimaryMenuItem(id.data);
+  await recordOperation({
+    action: operationActions.DELETE,
+    actor: session.user,
+    targetId: id.data,
+    targetType: "MENU_ITEM",
+  });
   revalidatePath("/", "layout");
   redirect("/admin/menus?notice=deleted");
 }

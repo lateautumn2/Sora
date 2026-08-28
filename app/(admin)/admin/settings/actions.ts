@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { requireAdminSession } from "@/lib/auth/admin";
+import { operationActions, recordOperation } from "@/lib/auth/operation-log";
 import { auth } from "@/lib/auth/server";
 import { saveSiteSettings } from "@/lib/content/service";
 import { siteSettingsSchema } from "@/lib/content/validation";
@@ -45,7 +46,7 @@ export async function saveSiteSettingsAction(
   _previousState: SiteSettingsActionState,
   formData: FormData,
 ): Promise<SiteSettingsActionState> {
-  await requireAdminSession();
+  const session = await requireAdminSession();
 
   const result = siteSettingsSchema.safeParse({
     title: formData.get("title"),
@@ -90,6 +91,11 @@ export async function saveSiteSettingsAction(
   }
 
   saveSiteSettings(result.data);
+  await recordOperation({
+    action: operationActions.UPDATE,
+    actor: session.user,
+    targetType: "SITE_SETTINGS",
+  });
   revalidatePath("/", "layout");
   redirect("/admin/settings?notice=saved");
 }
@@ -104,7 +110,7 @@ export async function saveRuntimeConfigAction(
   _previousState: RuntimeConfigActionState,
   formData: FormData,
 ): Promise<RuntimeConfigActionState> {
-  await requireAdminSession();
+  const session = await requireAdminSession();
 
   const result = runtimeConfigFormSchema.safeParse({
     appUrl: formData.get("appUrl"),
@@ -137,6 +143,13 @@ export async function saveRuntimeConfigAction(
     };
   }
 
+  await recordOperation({
+    action: operationActions.UPDATE,
+    actor: session.user,
+    metadata: { fields: ["appUrl", "trustedOrigins"] },
+    targetType: "RUNTIME_CONFIG",
+  });
+
   revalidatePath("/", "layout");
   redirect("/admin/settings?notice=runtime-saved");
 }
@@ -155,7 +168,7 @@ export async function changePasswordAction(
   _previousState: PasswordActionState,
   formData: FormData,
 ): Promise<PasswordActionState> {
-  await requireAdminSession();
+  const session = await requireAdminSession();
 
   const result = passwordSchema.safeParse({
     currentPassword: formData.get("currentPassword"),
@@ -190,6 +203,14 @@ export async function changePasswordAction(
       fieldErrors: { currentPassword: "当前密码不正确" },
     };
   }
+
+  await recordOperation({
+    action: operationActions.UPDATE,
+    actor: session.user,
+    metadata: { resource: "password", revokedOtherSessions: true },
+    targetId: session.user.id,
+    targetType: "AUTH",
+  });
 
   redirect("/admin/settings?notice=password-saved");
 }

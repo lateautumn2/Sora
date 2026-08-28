@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { requireAdminSession } from "@/lib/auth/admin";
+import { operationActions, recordOperation } from "@/lib/auth/operation-log";
 import { resolvePage } from "@/lib/content/pagination";
 import { deleteFriendLink, FriendLinkConflictError, saveFriendLink } from "@/lib/friends/service";
 import { friendLinkInputSchema } from "@/lib/friends/validation";
@@ -32,7 +33,7 @@ export async function saveFriendLinkAction(
   _previousState: FriendLinkActionState,
   formData: FormData,
 ): Promise<FriendLinkActionState> {
-  await requireAdminSession();
+  const session = await requireAdminSession();
 
   const page = formPage(formData);
   const result = friendLinkInputSchema.safeParse({
@@ -62,7 +63,14 @@ export async function saveFriendLinkAction(
   }
 
   try {
-    saveFriendLink(result.data);
+    const id = saveFriendLink(result.data);
+    await recordOperation({
+      action: result.data.id ? operationActions.UPDATE : operationActions.CREATE,
+      actor: session.user,
+      metadata: { name: result.data.name },
+      targetId: id,
+      targetType: "FRIEND_LINK",
+    });
   } catch (error) {
     if (error instanceof FriendLinkConflictError) {
       return {
@@ -82,7 +90,7 @@ export async function deleteFriendLinkAction(
   _previousState: FriendLinkActionState,
   formData: FormData,
 ): Promise<FriendLinkActionState> {
-  await requireAdminSession();
+  const session = await requireAdminSession();
 
   const page = formPage(formData);
   const id = z.string().uuid().safeParse(formData.get("id"));
@@ -91,6 +99,12 @@ export async function deleteFriendLinkAction(
   }
 
   deleteFriendLink(id.data);
+  await recordOperation({
+    action: operationActions.DELETE,
+    actor: session.user,
+    targetId: id.data,
+    targetType: "FRIEND_LINK",
+  });
   revalidateFriendLinks();
   redirect(adminFriendsUrl(page, "deleted"));
 }

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { auth } from "@/lib/auth/server";
+import { recordOperation, operationActions } from "@/lib/auth/operation-log";
 
 const loginSchema = z.object({
   email: z.string().trim().email("请输入有效邮箱地址"),
@@ -20,13 +21,13 @@ export async function loginAction(
   _previousState: LoginActionState,
   formData: FormData,
 ): Promise<LoginActionState> {
-  const result = loginSchema.safeParse({
+  const parsed = loginSchema.safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
   });
 
-  if (!result.success) {
-    const fields = result.error.flatten().fieldErrors;
+  if (!parsed.success) {
+    const fields = parsed.error.flatten().fieldErrors;
     return {
       fields: {
         email: fields.email?.[0],
@@ -35,14 +36,29 @@ export async function loginAction(
     };
   }
 
+  let authResult: Awaited<ReturnType<typeof auth.api.signInEmail>>;
   try {
-    await auth.api.signInEmail({
-      body: result.data,
+    authResult = await auth.api.signInEmail({
+      body: parsed.data,
       headers: await headers(),
     });
   } catch {
+    await recordOperation({
+      action: operationActions.LOGIN_FAILED,
+      actorEmail: parsed.data.email,
+      metadata: { method: "email" },
+      targetType: "AUTH",
+    });
     return { error: "邮箱或密码不正确" };
   }
+
+  await recordOperation({
+    action: operationActions.LOGIN,
+    actor: authResult.user,
+    metadata: { method: "email" },
+    targetId: authResult.user.id,
+    targetType: "AUTH",
+  });
 
   redirect("/admin");
 }

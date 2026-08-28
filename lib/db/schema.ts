@@ -103,6 +103,35 @@ export const authRateLimits = sqliteTable(
   (table) => [uniqueIndex("rate_limit_key_unique").on(table.key)],
 );
 
+/**
+ * 后台操作审计日志。
+ *
+ * userId 只作为关联线索，不设置外键，避免管理员账号发生清理或迁移时
+ * 级联删除历史审计记录。actorName/actorEmail 保存操作发生时的快照，
+ * 这样即使账号资料后来改变，日志仍然能还原当时的操作者信息。
+ */
+export const operationLogs = sqliteTable(
+  "operation_logs",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id"),
+    actorName: text("actor_name").notNull(),
+    actorEmail: text("actor_email").notNull(),
+    action: text("action").notNull(),
+    targetType: text("target_type").notNull(),
+    targetId: text("target_id"),
+    metadataJson: text("metadata_json").notNull().default("{}"),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(currentTimestamp),
+  },
+  (table) => [
+    index("operation_logs_created_at_idx").on(table.createdAt),
+    index("operation_logs_action_idx").on(table.action, table.createdAt),
+    index("operation_logs_user_id_idx").on(table.userId, table.createdAt),
+  ],
+);
+
 export const media = sqliteTable(
   "media",
   {
@@ -442,3 +471,4 @@ export type Post = typeof posts.$inferSelect;
 export type NewPost = typeof posts.$inferInsert;
 export type Comment = typeof comments.$inferSelect;
 export type FriendLinkRow = typeof friendLinks.$inferSelect;
+export type OperationLog = typeof operationLogs.$inferSelect;

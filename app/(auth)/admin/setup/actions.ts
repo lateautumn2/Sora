@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { isAdminInitialized } from "@/lib/auth/admin";
+import { operationActions, recordOperation } from "@/lib/auth/operation-log";
 import { auth } from "@/lib/auth/server";
 
 const setupSchema = z
@@ -32,15 +33,15 @@ export async function setupAdminAction(
     return { error: "站点已经完成初始化" };
   }
 
-  const result = setupSchema.safeParse({
+  const parsed = setupSchema.safeParse({
     name: formData.get("name"),
     email: formData.get("email"),
     password: formData.get("password"),
     confirmPassword: formData.get("confirmPassword"),
   });
 
-  if (!result.success) {
-    const fields = result.error.flatten().fieldErrors;
+  if (!parsed.success) {
+    const fields = parsed.error.flatten().fieldErrors;
     return {
       fields: {
         name: fields.name?.[0],
@@ -51,18 +52,27 @@ export async function setupAdminAction(
     };
   }
 
+  let authResult: Awaited<ReturnType<typeof auth.api.signUpEmail>>;
   try {
-    await auth.api.signUpEmail({
+    authResult = await auth.api.signUpEmail({
       body: {
-        name: result.data.name,
-        email: result.data.email,
-        password: result.data.password,
+        name: parsed.data.name,
+        email: parsed.data.email,
+        password: parsed.data.password,
       },
       headers: await headers(),
     });
   } catch {
     return { error: "初始化失败，请确认数据库为空后重试" };
   }
+
+  await recordOperation({
+    action: operationActions.CREATE,
+    actor: authResult.user,
+    metadata: { resource: "admin" },
+    targetId: authResult.user.id,
+    targetType: "ADMIN",
+  });
 
   redirect("/admin");
 }

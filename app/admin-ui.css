@@ -1279,6 +1279,85 @@
   text-align: right;
 }
 
+.admin-session-device,
+.admin-session-times,
+.admin-log-request {
+  display: grid;
+  min-width: 0;
+  gap: 0.25rem;
+}
+
+.admin-session-device strong,
+.admin-session-device span,
+.admin-session-times span,
+.admin-log-request span {
+  overflow-wrap: anywhere;
+}
+
+.admin-session-device strong {
+  color: var(--admin-text);
+  font-size: 0.8125rem;
+}
+
+.admin-session-device span,
+.admin-session-times span,
+.admin-log-request span {
+  color: var(--admin-muted);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.admin-mono-text,
+.admin-log-metadata {
+  font-family: var(--sora-mono);
+  font-size: 0.75rem;
+}
+
+.admin-session-current,
+.admin-log-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--admin-accent);
+  font-size: 0.75rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.admin-log-filter {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+  margin-bottom: 1rem;
+}
+
+.admin-log-filter label {
+  color: var(--admin-muted);
+  font-size: 0.8125rem;
+  font-weight: 650;
+}
+
+.admin-log-filter select {
+  min-height: 2rem;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius-control);
+  background: var(--admin-surface);
+  padding: 0 0.625rem;
+  color: var(--admin-text);
+  font: inherit;
+  font-size: 0.8125rem;
+}
+
+.admin-log-metadata {
+  display: block;
+  max-width: 24rem;
+  overflow-wrap: anywhere;
+  color: var(--admin-muted);
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
 .admin-data-primary {
   display: grid;
   gap: 0.25rem;
