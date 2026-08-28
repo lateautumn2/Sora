@@ -19,6 +19,36 @@
   --admin-z-toast: 70;
 }
 
+:root[data-theme="dark"] {
+  --admin-bg: #101115;
+  --admin-surface: #181a20;
+  --admin-surface-muted: #232630;
+  --admin-sidebar: #0b0c0f;
+  --admin-text: #f1f3f5;
+  --admin-muted: #a7adba;
+  --admin-border: #343945;
+  --admin-danger: #ff928a;
+  --admin-shadow-surface: 0 10px 28px rgb(0 0 0 / 22%);
+  --admin-shadow-popover: 0 12px 30px rgb(0 0 0 / 36%);
+  --admin-shadow-dialog: 0 24px 60px rgb(0 0 0 / 52%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --admin-bg: #101115;
+    --admin-surface: #181a20;
+    --admin-surface-muted: #232630;
+    --admin-sidebar: #0b0c0f;
+    --admin-text: #f1f3f5;
+    --admin-muted: #a7adba;
+    --admin-border: #343945;
+    --admin-danger: #ff928a;
+    --admin-shadow-surface: 0 10px 28px rgb(0 0 0 / 22%);
+    --admin-shadow-popover: 0 12px 30px rgb(0 0 0 / 36%);
+    --admin-shadow-dialog: 0 24px 60px rgb(0 0 0 / 52%);
+  }
+}
+
 .ui-button,
 .ui-icon-button {
   border: 1px solid transparent;
@@ -616,6 +646,25 @@
   font-weight: 700;
 }
 
+.admin-shell-brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.admin-shell-brand-row .theme-toggle {
+  border-color: var(--admin-border);
+  background: var(--admin-surface);
+  color: var(--admin-muted);
+}
+
+.admin-shell-brand-row .theme-toggle:hover,
+.admin-mobile-navigation-controls .theme-toggle:hover {
+  border-color: var(--admin-accent);
+  color: var(--admin-accent);
+}
+
 .admin-shell-navigation,
 .admin-mobile-navigation-list {
   display: grid;
@@ -767,6 +816,19 @@
 
 .admin-mobile-navigation-slot {
   margin-bottom: 1rem;
+}
+
+.admin-mobile-navigation-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.admin-mobile-navigation-controls .theme-toggle {
+  border-color: var(--admin-border);
+  background: var(--admin-surface);
+  color: var(--admin-muted);
 }
 
 .admin-mobile-navigation-dialog {
@@ -1764,9 +1826,29 @@
   justify-content: space-between;
   margin-bottom: 1.5rem;
   border-bottom: 1px solid var(--admin-border);
-  background: rgb(255 255 255 / 94%);
+  background: color-mix(in srgb, var(--admin-bg) 94%, transparent);
   padding: 0.75rem 1rem;
   backdrop-filter: blur(8px);
+}
+
+/* 亮色主题中的少量固定状态色在暗色背景上会过亮，改用低亮度状态色。 */
+:root[data-theme="dark"] .admin-status-published,
+:root[data-theme="dark"] .admin-status-approved {
+  background: #173d2b;
+  color: #8de2b4;
+}
+
+:root[data-theme="dark"] .admin-status-draft,
+:root[data-theme="dark"] .admin-status-pending,
+:root[data-theme="dark"] .admin-status-archived {
+  background: #473918;
+  color: #f0ca72;
+}
+
+:root[data-theme="dark"] .admin-status-trashed,
+:root[data-theme="dark"] .admin-status-spam {
+  background: #4a2020;
+  color: #ffaaa3;
 }
 
 .content-editor-toolbar-back,

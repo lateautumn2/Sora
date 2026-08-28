@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 import { AdminAccount } from "./admin-account";
 import { adminNavigation, isAdminNavigationActive } from "./admin-navigation";
+import { ThemeToggle } from "@/components/ui/theme-provider";
 
 interface AdminSidebarProps {
   user: {
@@ -19,9 +20,12 @@ export function AdminSidebar({ user }: AdminSidebarProps) {
   return (
     <aside className="admin-sidebar-shell hidden lg:block">
       <div className="admin-sidebar-shell-panel">
-        <Link className="admin-shell-brand" href="/admin">
-          Sora 管理
-        </Link>
+        <div className="admin-shell-brand-row">
+          <Link className="admin-shell-brand" href="/admin">
+            Sora 管理
+          </Link>
+          <ThemeToggle />
+        </div>
         <nav aria-label="后台导航" className="admin-shell-navigation">
           {adminNavigation.map((group) => (
             <section className="admin-navigation-group" key={group.group}>

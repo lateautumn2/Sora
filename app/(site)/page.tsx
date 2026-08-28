@@ -11,6 +11,7 @@ import {
 import { PostList } from "@/components/site/post-list";
 import { PostPagination } from "@/components/site/post-pagination";
 import { SiteSearch } from "@/components/site/site-search";
+import { ThemeToggle } from "@/components/ui/theme-provider";
 import { resolveSiteNavigation } from "@/components/site/site-navigation";
 import {
   BilibiliIcon,
@@ -34,6 +35,9 @@ export default async function HomePage({
   const homeQuoteHtml = sanitizeHomeQuote(settings.homeQuoteHtml);
   return (
     <div className="sora-home">
+      <div className="sora-home-theme-toggle">
+        <ThemeToggle />
+      </div>
       <header className="sora-home-profile">
         <div
           aria-label={`${settings.title} 头像`}

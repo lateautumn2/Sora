@@ -4,6 +4,7 @@ import Link from "next/link";
 import { MobileNavigation } from "@/components/site/mobile-navigation";
 import { resolveSiteNavigation } from "@/components/site/site-navigation";
 import { SiteSearch } from "@/components/site/site-search";
+import { ThemeToggle } from "@/components/ui/theme-provider";
 import { getSiteSettings, listPrimaryMenuItems } from "@/lib/content/service";
 
 export function SiteHeader() {
@@ -28,6 +29,7 @@ export function SiteHeader() {
           ))}
         </nav>
         <div className="sora-header-actions">
+          <ThemeToggle />
           <SiteSearch variant="header" />
           <MobileNavigation navigation={navigation.map(({ href, label }) => ({ href, label }))} />
         </div>
