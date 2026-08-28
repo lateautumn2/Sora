@@ -18,20 +18,20 @@ interface MediaUploadFormProps {
 
 function timestampName(date = new Date()): string {
   const pad = (value: number) => String(value).padStart(2, "0");
-  return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}-${pad(
+  return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}${pad(
     date.getHours(),
   )}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
 }
 
 export function MediaUploadForm({ action }: MediaUploadFormProps) {
-  const [altText, setAltText] = useState("");
+  const [imageName, setImageName] = useState("");
   const [fileName, setFileName] = useState("");
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     setFileName(file?.name ?? "");
-    if (file && !altText) setAltText(timestampName());
-    if (!file) setAltText("");
+    if (file && !imageName) setImageName(timestampName());
+    if (!file) setImageName("");
   }
 
   return (
@@ -46,13 +46,13 @@ export function MediaUploadForm({ action }: MediaUploadFormProps) {
             required
           />
         </Field>
-        <Field label="图片名称 / Alt 文本">
+        <Field label="图片名称">
           <Input
             aria-label="图片名称"
-            name="altText"
-            onChange={(event) => setAltText(event.target.value)}
-            placeholder="选择图片后自动生成"
-            value={altText}
+            name="imageName"
+            onChange={(event) => setImageName(event.target.value)}
+            placeholder="选择图片后自动生成 YYYYMMDDHHmmss"
+            value={imageName}
           />
         </Field>
         <div className="admin-media-upload-action">

@@ -3,15 +3,12 @@ import { storeMedia } from "@/lib/media/service";
 
 /**
  * 编辑器内图片上传接口。
- * 接收 multipart 表单（file + 可选 altText），返回可直接插入 Markdown 的地址。
+ * 接收 multipart 表单（file + 可选 imageName，兼容旧的 altText 字段），返回可直接插入 Markdown 的地址。
  */
 export async function POST(request: Request): Promise<Response> {
   const session = await getAdminSession();
   if (!session) {
-    return Response.json(
-      { error: { code: "UNAUTHORIZED", message: "请先登录" } },
-      { status: 401 },
-    );
+    return Response.json({ error: { code: "UNAUTHORIZED", message: "请先登录" } }, { status: 401 });
   }
 
   let form: FormData;
@@ -33,7 +30,7 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   try {
-    const item = await storeMedia(file, String(form.get("altText") ?? ""));
+    const item = await storeMedia(file, String(form.get("imageName") ?? form.get("altText") ?? ""));
     return Response.json({
       data: {
         url: `/media/${item.storageKey}`,

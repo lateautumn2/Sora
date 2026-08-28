@@ -13,7 +13,7 @@ export async function uploadMediaAction(formData: FormData): Promise<never> {
 
   let notice = "uploaded";
   try {
-    await storeMedia(file, String(formData.get("altText") ?? ""));
+    await storeMedia(file, String(formData.get("imageName") ?? formData.get("altText") ?? ""));
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
     notice = message === "MEDIA_SIZE_INVALID" ? "size" : "type";

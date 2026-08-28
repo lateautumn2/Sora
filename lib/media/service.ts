@@ -60,7 +60,79 @@ export function countMedia(): number {
   return row.total;
 }
 
-export async function storeMedia(file: File, altText: string): Promise<MediaItem> {
+function timestampName(date: Date): string {
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}${pad(
+    date.getHours(),
+  )}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
+}
+
+function mediaDirectory(date: Date): string {
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}/${pad(date.getMonth() + 1)}/${pad(date.getDate())}`;
+}
+
+function imageBaseName(value: string, extension: string, date: Date): string {
+  // 名称会进入实际文件路径：移除路径分隔符、控制字符和 Windows 不允许的字符，
+  // 同时限制长度，为实际扩展名和可能的冲突后缀预留空间。
+  const cleaned = value
+    .trim()
+    .replace(/\.[^./\\]*$/u, "")
+    .replace(/[<>:"/\\|?*\u0000-\u001f\u007f]/gu, "-")
+    .replace(/\s+/gu, " ")
+    .replace(/^\.+|\.+$/gu, "")
+    .trim();
+  const fallback = cleaned || timestampName(date);
+  return fallback.slice(0, Math.max(1, 255 - extension.length - 1));
+}
+
+async function writeMediaFile(
+  input: Buffer,
+  uploadRoot: string,
+  directory: string,
+  baseName: string,
+  extension: string,
+): Promise<{ storageKey: string; targetPath: string; fileName: string }> {
+  const sqlite = getDatabaseConnection().sqlite;
+  let suffix = 0;
+
+  while (true) {
+    const fileName = `${baseName}${suffix ? `-${suffix}` : ""}.${extension}`;
+    const storageKey = `${directory}/${fileName}`;
+    const targetPath = resolve(uploadRoot, storageKey);
+    if (!targetPath.startsWith(`${uploadRoot}${sep}`)) {
+      throw new Error("MEDIA_PATH_INVALID");
+    }
+
+    // 同名文件和同名数据库记录都要避开。后缀只用于处理同一秒内的重名上传，
+    // 正常上传仍保持用户填写的名称，未填写时则保持 YYYYMMDDHHmmss 规范。
+    const existing = sqlite
+      .prepare("SELECT 1 AS present FROM media WHERE storage_key = ? LIMIT 1")
+      .get(storageKey);
+    if (existing) {
+      suffix += 1;
+      continue;
+    }
+
+    await mkdir(dirname(targetPath), { recursive: true });
+    try {
+      await writeFile(targetPath, input, { flag: "wx" });
+      return { storageKey, targetPath, fileName };
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "EEXIST") {
+        suffix += 1;
+        continue;
+      }
+      throw error;
+    }
+  }
+}
+
+/**
+ * 保存上传图片。第二个参数兼容现有的 altText 表单字段，但其值现在同时作为
+ * 图片名称使用；这样管理页和编辑器上传接口都能得到一致的文件命名行为。
+ */
+export async function storeMedia(file: File, imageName: string): Promise<MediaItem> {
   if (file.size <= 0 || file.size > maxUploadBytes) {
     throw new Error("MEDIA_SIZE_INVALID");
   }
@@ -79,25 +151,25 @@ export async function storeMedia(file: File, altText: string): Promise<MediaItem
 
   const now = new Date();
   const id = randomUUID();
-  const storageKey = `${now.getUTCFullYear()}/${String(now.getUTCMonth() + 1).padStart(2, "0")}/${String(now.getUTCDate()).padStart(2, "0")}/${String(now.getUTCHours()).padStart(2, "0")}${String(now.getUTCMinutes()).padStart(2, "0")}${String(now.getUTCSeconds()).padStart(2, "0")}-${id}.${format.extension}`;
   const uploadRoot = resolve(getEnvironment().uploadDir);
-  const targetPath = resolve(uploadRoot, storageKey);
-  if (!targetPath.startsWith(`${uploadRoot}${sep}`)) {
-    throw new Error("MEDIA_PATH_INVALID");
-  }
-
-  await mkdir(dirname(targetPath), { recursive: true });
-  await writeFile(targetPath, input, { flag: "wx" });
+  const baseName = imageBaseName(imageName, format.extension, now);
+  const { storageKey, targetPath, fileName } = await writeMediaFile(
+    input,
+    uploadRoot,
+    mediaDirectory(now),
+    baseName,
+    format.extension,
+  );
   const item: MediaItem = {
     id,
     storageKey,
-    originalName: file.name.slice(0, 255) || `image.${format.extension}`,
+    originalName: fileName,
     mimeType: format.mimeType,
     byteSize: input.byteLength,
     width: metadata.width ?? null,
     height: metadata.height ?? null,
     sha256: createHash("sha256").update(input).digest("hex"),
-    altText: altText.trim().slice(0, 300),
+    altText: imageName.trim().slice(0, 300),
     createdAt: Date.now(),
   };
 
