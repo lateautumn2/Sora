@@ -8,6 +8,7 @@ import { hashRequestToken } from "@/lib/interactions/request";
 import type { PublicCommentInput } from "@/lib/comments/validation";
 
 export type CommentStatus = "PENDING" | "APPROVED" | "SPAM" | "TRASHED";
+export type CommentAuthorRole = "VISITOR" | "OWNER";
 
 export interface PublicComment {
   id: string;
@@ -27,8 +28,12 @@ export interface AdminComment extends PublicComment {
   postId: string;
   postTitle: string;
   status: CommentStatus;
+  authorRole: CommentAuthorRole;
   authorEmail: string;
   content: string;
+  parentAuthorName: string | null;
+  parentAuthorRole: CommentAuthorRole | null;
+  parentContent: string | null;
 }
 
 export interface AdminCommentPostGroup {
@@ -212,12 +217,18 @@ export function listAdminComments(
   const rows = getDatabaseConnection()
     .sqlite.prepare(
       `SELECT c.id, c.post_id AS postId, p.title AS postTitle, c.parent_id AS parentId,
-              c.root_id AS rootId, c.status, c.author_name AS authorName,
+              c.root_id AS rootId, c.status, c.author_role AS authorRole,
+              c.author_name AS authorName,
               c.author_email AS authorEmail, c.author_website AS authorWebsite,
               c.content, c.rendered_html AS renderedHtml, c.ip_city AS ipCity,
               c.browser_name AS browserName, c.browser_version AS browserVersion,
-              c.created_at AS createdAt
-       FROM comments c JOIN posts p ON p.id = c.post_id
+              c.created_at AS createdAt,
+              parent.author_name AS parentAuthorName,
+              parent.author_role AS parentAuthorRole,
+              parent.content AS parentContent
+       FROM comments c
+       JOIN posts p ON p.id = c.post_id
+       LEFT JOIN comments parent ON parent.id = c.parent_id
        ${where} ORDER BY c.created_at DESC
        LIMIT ? OFFSET ?`,
     )
@@ -271,13 +282,18 @@ export function listAdminCommentPosts(
   const comments = sqlite
     .prepare(
       `SELECT c.id, c.post_id AS postId, p.title AS postTitle, c.parent_id AS parentId,
-              c.root_id AS rootId, c.status, c.author_name AS authorName,
+              c.root_id AS rootId, c.status, c.author_role AS authorRole,
+              c.author_name AS authorName,
               c.author_email AS authorEmail, c.author_website AS authorWebsite,
               c.content, c.rendered_html AS renderedHtml, c.ip_city AS ipCity,
               c.browser_name AS browserName, c.browser_version AS browserVersion,
-              c.created_at AS createdAt
+              c.created_at AS createdAt,
+              parent.author_name AS parentAuthorName,
+              parent.author_role AS parentAuthorRole,
+              parent.content AS parentContent
        FROM comments c
        JOIN posts p ON p.id = c.post_id
+       LEFT JOIN comments parent ON parent.id = c.parent_id
        WHERE ${commentWhere}
        ORDER BY c.created_at DESC`,
     )
@@ -314,13 +330,18 @@ export function countAdminCommentsByStatus(): Record<CommentStatus, number> {
   return result;
 }
 
-export function setCommentStatus(id: string, nextStatus: CommentStatus): void {
+export function setCommentStatus(
+  id: string,
+  nextStatus: CommentStatus,
+): { changed: boolean; becameApproved: boolean } {
   const sqlite = getDatabaseConnection().sqlite;
-  sqlite.transaction(() => {
+  return sqlite.transaction(() => {
     const current = sqlite
       .prepare("SELECT post_id AS postId, status FROM comments WHERE id = ?")
       .get(id) as { postId: string; status: CommentStatus } | undefined;
-    if (!current || current.status === nextStatus) return;
+    if (!current || current.status === nextStatus) {
+      return { changed: false, becameApproved: false };
+    }
     const now = Date.now();
     sqlite
       .prepare("UPDATE comments SET status = ?, approved_at = ?, updated_at = ? WHERE id = ?")
@@ -334,6 +355,10 @@ export function setCommentStatus(id: string, nextStatus: CommentStatus): void {
         .prepare("UPDATE posts SET comment_count = MAX(comment_count - 1, 0) WHERE id = ?")
         .run(current.postId);
     }
+    return {
+      changed: true,
+      becameApproved: current.status !== "APPROVED" && nextStatus === "APPROVED",
+    };
   })();
 }
 
@@ -354,9 +379,9 @@ export function replyToComment(
     sqlite
       .prepare(
         `INSERT INTO comments (
-           id, post_id, parent_id, root_id, status, author_name, author_email,
+           id, post_id, parent_id, root_id, status, author_role, author_name, author_email,
            content, rendered_html, ip_hash, created_at, updated_at, approved_at
-         ) VALUES (?, ?, ?, ?, 'APPROVED', ?, ?, ?, ?, 'administrator', ?, ?, ?)`,
+         ) VALUES (?, ?, ?, ?, 'APPROVED', 'OWNER', ?, ?, ?, ?, 'administrator', ?, ?, ?)`,
       )
       .run(
         id,

@@ -8,9 +8,11 @@ import {
   changePasswordAction,
   saveRuntimeConfigAction,
   saveSiteSettingsAction,
+  saveSmtpConfigAction,
   type PasswordActionState,
   type RuntimeConfigActionState,
   type SiteSettingsActionState,
+  type SmtpConfigActionState,
 } from "@/app/(admin)/admin/settings/actions";
 import { AdminSurface } from "@/components/admin/admin-surface";
 import { Button, IconButton } from "@/components/ui/button";
@@ -23,15 +25,18 @@ import { Tabs } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip } from "@/components/ui/tooltip";
 import type { CoverSource, SiteSettings } from "@/lib/content/validation";
+import type { SmtpConfigView } from "@/lib/email/config";
 import type { RuntimeConfig } from "@/lib/runtime-config";
 
 interface SettingsFormProps {
   runtimeConfig: RuntimeConfig;
   settings: SiteSettings;
+  smtpConfig: SmtpConfigView;
 }
 
 const initialSiteState: SiteSettingsActionState = { status: "idle" };
 const initialRuntimeState: RuntimeConfigActionState = { status: "idle" };
+const initialSmtpState: SmtpConfigActionState = { status: "idle" };
 const initialPasswordState: PasswordActionState = { status: "idle" };
 
 function SubmitButton({ children }: { children: string }) {
@@ -157,7 +162,7 @@ function SiteSettingsHiddenFields({
   );
 }
 
-export function SettingsForm({ runtimeConfig, settings }: SettingsFormProps) {
+export function SettingsForm({ runtimeConfig, settings, smtpConfig }: SettingsFormProps) {
   const [siteState, siteAction] = useActionState(saveSiteSettingsAction, initialSiteState);
   const [runtimeState, runtimeAction] = useActionState(
     saveRuntimeConfigAction,
@@ -167,6 +172,7 @@ export function SettingsForm({ runtimeConfig, settings }: SettingsFormProps) {
     changePasswordAction,
     initialPasswordState,
   );
+  const [smtpState, smtpAction] = useActionState(saveSmtpConfigAction, initialSmtpState);
 
   return (
     <Tabs
@@ -283,6 +289,101 @@ export function SettingsForm({ runtimeConfig, settings }: SettingsFormProps) {
                   </label>
                 </fieldset>
                 <SubmitButton>保存设置</SubmitButton>
+              </form>
+            </AdminSurface>
+          ),
+        },
+        {
+          value: "email",
+          label: "邮件提醒",
+          content: (
+            <AdminSurface>
+              <form action={smtpAction} className="settings-form-grid">
+                {smtpState.formError ? <FormMessage>{smtpState.formError}</FormMessage> : null}
+                <fieldset className="settings-form-options">
+                  <legend>通知规则</legend>
+                  <label>
+                    <Checkbox
+                      className="ui-checkbox-input"
+                      defaultChecked={smtpConfig.enabled}
+                      name="enabled"
+                    />
+                    <span>开启邮件提醒</span>
+                  </label>
+                  <label>
+                    <Checkbox
+                      className="ui-checkbox-input"
+                      defaultChecked={smtpConfig.suppressVisitorReplies}
+                      name="suppressVisitorReplies"
+                    />
+                    <span>与博主无关的评论不推送</span>
+                  </label>
+                </fieldset>
+                <div className="settings-form-two-columns">
+                  <Field error={smtpState.fieldErrors?.host} label="SMTP 服务器">
+                    <Input
+                      autoComplete="off"
+                      defaultValue={smtpConfig.host}
+                      name="host"
+                      placeholder="smtp.example.com"
+                    />
+                  </Field>
+                  <Field error={smtpState.fieldErrors?.port} label="端口">
+                    <Input
+                      defaultValue={smtpConfig.port}
+                      max={65535}
+                      min={1}
+                      name="port"
+                      type="number"
+                    />
+                  </Field>
+                </div>
+                <SelectField
+                  defaultValue={smtpConfig.secure ? "true" : "false"}
+                  label="连接加密"
+                  name="secure"
+                  options={[
+                    { value: "true", label: "SSL/TLS（常用端口 465）" },
+                    { value: "false", label: "STARTTLS（常用端口 587）" },
+                  ]}
+                />
+                <div className="settings-form-two-columns">
+                  <Field error={smtpState.fieldErrors?.user} label="SMTP 用户名">
+                    <Input autoComplete="username" defaultValue={smtpConfig.user} name="user" />
+                  </Field>
+                  <Field
+                    description={
+                      smtpConfig.passwordConfigured
+                        ? "已保存密码；留空将继续使用现有密码。"
+                        : "请填写邮箱密码或 SMTP 授权码。"
+                    }
+                    error={smtpState.fieldErrors?.password}
+                    label="SMTP 密码"
+                  >
+                    <Input
+                      autoComplete="new-password"
+                      name="password"
+                      placeholder={smtpConfig.passwordConfigured ? "留空保持不变" : ""}
+                      type="password"
+                    />
+                  </Field>
+                </div>
+                <div className="settings-form-two-columns">
+                  <Field error={smtpState.fieldErrors?.fromName} label="发件人名称">
+                    <Input defaultValue={smtpConfig.fromName} name="fromName" />
+                  </Field>
+                  <Field error={smtpState.fieldErrors?.fromAddress} label="发件邮箱">
+                    <Input defaultValue={smtpConfig.fromAddress} name="fromAddress" type="email" />
+                  </Field>
+                </div>
+                <Field
+                  description="游客发表评论或回复博主时，提醒将发送到此邮箱。"
+                  error={smtpState.fieldErrors?.ownerEmail}
+                  label="博主收件邮箱"
+                >
+                  <Input defaultValue={smtpConfig.ownerEmail} name="ownerEmail" type="email" />
+                </Field>
+                <SubmitButton>保存邮件设置</SubmitButton>
               </form>
             </AdminSurface>
           ),

@@ -10,6 +10,7 @@ import { operationActions, recordOperation } from "@/lib/auth/operation-log";
 import { auth } from "@/lib/auth/server";
 import { saveSiteSettings } from "@/lib/content/service";
 import { siteSettingsSchema } from "@/lib/content/validation";
+import { saveSmtpConfig, smtpConfigFormSchema } from "@/lib/email/config";
 import type { FormActionState } from "@/lib/forms/action-state";
 import { saveRuntimeConfig } from "@/lib/runtime-config";
 
@@ -30,6 +31,9 @@ export type SiteSettingsField =
   | "coverSources";
 export type SiteSettingsActionState = FormActionState<SiteSettingsField>;
 export type RuntimeConfigActionState = FormActionState<"appUrl" | "trustedOrigins">;
+export type SmtpConfigActionState = FormActionState<
+  "host" | "port" | "user" | "password" | "fromName" | "fromAddress" | "ownerEmail"
+>;
 export type PasswordActionState = FormActionState<
   "currentPassword" | "newPassword" | "confirmPassword"
 >;
@@ -152,6 +156,77 @@ export async function saveRuntimeConfigAction(
 
   revalidatePath("/", "layout");
   redirect("/admin/settings?notice=runtime-saved");
+}
+
+/** 保存 SMTP 参数；密码留空时由配置层沿用现有值，且不会写入操作日志。 */
+export async function saveSmtpConfigAction(
+  _previousState: SmtpConfigActionState,
+  formData: FormData,
+): Promise<SmtpConfigActionState> {
+  const session = await requireAdminSession();
+  const result = smtpConfigFormSchema.safeParse({
+    enabled: formData.get("enabled") === "on",
+    suppressVisitorReplies: formData.get("suppressVisitorReplies") === "on",
+    host: formData.get("host"),
+    port: formData.get("port"),
+    secure: formData.get("secure") === "true",
+    user: formData.get("user"),
+    password: formData.get("password"),
+    fromName: formData.get("fromName"),
+    fromAddress: formData.get("fromAddress"),
+    ownerEmail: formData.get("ownerEmail"),
+  });
+
+  if (!result.success) {
+    const fields = result.error.flatten().fieldErrors;
+    return {
+      status: "error",
+      formError: "请检查邮件提醒设置。",
+      fieldErrors: {
+        host: fields.host?.[0],
+        port: fields.port?.[0],
+        user: fields.user?.[0],
+        password: fields.password?.[0],
+        fromName: fields.fromName?.[0],
+        fromAddress: fields.fromAddress?.[0],
+        ownerEmail: fields.ownerEmail?.[0],
+      },
+    };
+  }
+
+  try {
+    saveSmtpConfig(result.data);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const issueFor = (field: string) =>
+        error.issues.find((issue) => issue.path[0] === field)?.message;
+      return {
+        status: "error",
+        formError: "启用邮件提醒前，请完整填写 SMTP 配置。",
+        fieldErrors: {
+          host: issueFor("host"),
+          port: issueFor("port"),
+          user: issueFor("user"),
+          password: issueFor("password"),
+          fromName: issueFor("fromName"),
+          fromAddress: issueFor("fromAddress"),
+          ownerEmail: issueFor("ownerEmail"),
+        },
+      };
+    }
+    return { status: "error", formError: "邮件提醒设置保存失败，请检查数据目录权限。" };
+  }
+
+  await recordOperation({
+    action: operationActions.UPDATE,
+    actor: session.user,
+    metadata: {
+      enabled: result.data.enabled,
+      suppressVisitorReplies: result.data.suppressVisitorReplies,
+    },
+    targetType: "SMTP_CONFIG",
+  });
+  redirect("/admin/settings?notice=smtp-saved");
 }
 
 const passwordSchema = z

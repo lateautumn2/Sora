@@ -60,7 +60,13 @@ export default async function AdminCommentsPage({
       >
         {query.notice ? (
           <p className="admin-notice" role="status">
-            {query.notice === "replied" ? "回复已公开" : "回复内容格式不正确"}
+            {query.notice === "replied"
+              ? "回复已公开"
+              : query.notice === "replied-mail-failed"
+                ? "回复已公开，但提醒邮件发送失败，请检查 SMTP 设置和服务日志"
+                : query.notice === "approved-mail-failed"
+                  ? "评论已通过，但提醒邮件发送失败，请检查 SMTP 设置和服务日志"
+                  : "回复内容格式不正确"}
           </p>
         ) : null}
         <AdminToolbar label="评论筛选">
@@ -130,6 +136,11 @@ function AdminCommentRow({ comment }: { comment: AdminComment }) {
       <div className="admin-comment-copy">
         <div className="admin-comment-byline">
           <strong>{comment.authorName}</strong>
+          <span
+            className={`admin-comment-role admin-comment-role-${comment.authorRole.toLowerCase()}`}
+          >
+            {comment.authorRole === "OWNER" ? "博主" : "游客"}
+          </span>
           <span className={`admin-status admin-status-${comment.status.toLowerCase()}`}>
             {statusLabels[comment.status]}
           </span>
@@ -144,6 +155,19 @@ function AdminCommentRow({ comment }: { comment: AdminComment }) {
           />
         </div>
         <p className="admin-comment-email">{comment.authorEmail}</p>
+        <div className="admin-comment-relation">
+          <strong>
+            {!comment.parentId
+              ? "评论博主文章"
+              : comment.parentAuthorRole === "OWNER"
+                ? "回复博主评论"
+                : "回复游客评论"}
+          </strong>
+          {comment.parentId ? (
+            <span>被回复者：{comment.parentAuthorName || "未知用户"}</span>
+          ) : null}
+          {comment.parentContent ? <blockquote>{comment.parentContent}</blockquote> : null}
+        </div>
         <div
           className="prose-content admin-comment-content"
           dangerouslySetInnerHTML={{ __html: comment.renderedHtml }}

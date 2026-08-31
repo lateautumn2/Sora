@@ -71,6 +71,13 @@
       "when": 1787907330954,
       "tag": "0009_operation_logs",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1788149446314,
+      "tag": "0010_comment_email_notifications",
+      "breakpoints": true
     }
   ]
 }

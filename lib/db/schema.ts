@@ -320,6 +320,9 @@ export const comments = sqliteTable(
     status: text("status", { enum: ["PENDING", "APPROVED", "SPAM", "TRASHED"] })
       .notNull()
       .default("PENDING"),
+    authorRole: text("author_role", { enum: ["VISITOR", "OWNER"] })
+      .notNull()
+      .default("VISITOR"),
     authorName: text("author_name").notNull(),
     authorEmail: text("author_email").notNull(),
     authorWebsite: text("author_website"),
@@ -334,6 +337,7 @@ export const comments = sqliteTable(
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().default(currentTimestamp),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().default(currentTimestamp),
     approvedAt: integer("approved_at", { mode: "timestamp_ms" }),
+    replyNotifiedAt: integer("reply_notified_at", { mode: "timestamp_ms" }),
   },
   (table) => [
     index("comments_post_status_idx").on(table.postId, table.status, table.createdAt),
@@ -343,6 +347,7 @@ export const comments = sqliteTable(
       "comments_status_check",
       sql`${table.status} IN ('PENDING', 'APPROVED', 'SPAM', 'TRASHED')`,
     ),
+    check("comments_author_role_check", sql`${table.authorRole} IN ('VISITOR', 'OWNER')`),
   ],
 );
 

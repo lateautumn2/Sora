@@ -1,4 +1,5 @@
 import { createPublicComment, InteractionError } from "@/lib/comments/service";
+import { notifyForVisitorComment } from "@/lib/comments/notifications";
 import { resolveCommentRequestContext } from "@/lib/comments/request-context";
 import { publicCommentSchema } from "@/lib/comments/validation";
 import { getVisitorHash, isTrustedRequestOrigin } from "@/lib/interactions/request";
@@ -51,6 +52,9 @@ export async function POST(
       getVisitorHash(request),
       context,
     );
+    if (!result.duplicate) {
+      await notifyForVisitorComment(result.id);
+    }
     return Response.json(
       {
         data: {
