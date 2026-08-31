@@ -39,9 +39,10 @@ function createAuthOptions(
     session: {
       expiresIn: 60 * 60 * 24 * 7,
       updateAge: 60 * 60 * 24,
+      // 后台会话支持远程撤销，授权判断必须以数据库记录为准。
+      // 若启用签名 Cookie 缓存，被撤销的浏览器会在缓存有效期内继续通过认证。
       cookieCache: {
-        enabled: true,
-        maxAge: 60 * 5,
+        enabled: false,
       },
     },
     rateLimit: {

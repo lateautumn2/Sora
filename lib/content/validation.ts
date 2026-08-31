@@ -17,7 +17,7 @@ const slugSchema = z
  * 数据库与内容包格式允许使用 UUID 或迁移来源的稳定字符串作为实体 ID。
  * ID 只会作为参数化 SQL 的关联值使用，因此这里约束非空与长度，不强制 UUID。
  */
-const storedIdentifierSchema = z.string().trim().min(1).max(255);
+export const storedIdentifierSchema = z.string().trim().min(1).max(255);
 
 export const contentInputSchema = z.object({
   id: storedIdentifierSchema.optional(),
@@ -70,7 +70,8 @@ export function decodeSlugParam(value: string): string {
 }
 
 export const taxonomyInputSchema = z.object({
-  id: z.string().uuid().optional(),
+  // 导入的分类与标签可能使用来源系统的稳定字符串 ID，不应只接受 UUID。
+  id: storedIdentifierSchema.optional(),
   name: z.string().trim().min(1, "请输入名称").max(80, "名称不能超过 80 个字符"),
   slug: slugSchema,
   description: z.string().trim().max(500, "说明不能超过 500 个字符").default(""),

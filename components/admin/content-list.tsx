@@ -10,7 +10,7 @@ import { AdminTabs } from "@/components/admin/admin-tabs";
 import { AdminToolbar } from "@/components/admin/admin-toolbar";
 import { AdminNoticeToast } from "@/components/admin/admin-notice-toast";
 import { IconButton } from "@/components/ui/button";
-import { Tooltip } from "@/components/ui/tooltip";
+import { Tooltip, TooltipLink } from "@/components/ui/tooltip";
 import { PostPagination } from "@/components/site/post-pagination";
 import type { ContentSummary } from "@/lib/content/service";
 
@@ -97,15 +97,14 @@ export function ContentList({
             </Tooltip>
           </form>
         ) : (
-          <Tooltip content="编辑">
-            <Link
-              aria-label={`编辑${item.title}`}
-              className="ui-icon-button"
-              href={`/admin/${segment}/${item.id}`}
-            >
-              <Edit3 aria-hidden="true" size={17} />
-            </Link>
-          </Tooltip>
+          <TooltipLink
+            aria-label={`编辑${item.title}`}
+            className="ui-icon-button"
+            content="编辑"
+            href={`/admin/${segment}/${item.id}`}
+          >
+            <Edit3 aria-hidden="true" size={17} />
+          </TooltipLink>
         ),
     },
   ];

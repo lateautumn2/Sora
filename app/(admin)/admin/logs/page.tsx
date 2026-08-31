@@ -15,7 +15,7 @@ import {
 } from "@/lib/auth/operation-log";
 import { resolvePage, resolveTotalPages } from "@/lib/content/pagination";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 const actionOptions: readonly { value: OperationAction; label: string }[] = Object.values(
   operationActions,
 ).map((value) => ({ value, label: operationActionLabels[value] }));
@@ -42,8 +42,10 @@ export default async function AdminLogsPage({
 }) {
   const query = await searchParams;
   const action = parseAction(query.action);
-  const page = resolvePage(query.page);
   const total = countOperationLogs(action);
+  const totalPages = resolveTotalPages(total, PAGE_SIZE);
+  const requestedPage = resolvePage(query.page);
+  const page = totalPages > 0 ? Math.min(requestedPage, totalPages) : 1;
   const logs = listOperationLogs(PAGE_SIZE, (page - 1) * PAGE_SIZE, action);
   const columns: readonly AdminDataListColumn<OperationLogRow>[] = [
     {
@@ -147,14 +149,19 @@ export default async function AdminLogsPage({
             rows={logs}
           />
         )}
-        <PostPagination
-          basePath="/admin/logs"
-          className="admin-pagination"
-          extraQuery={action ? { action } : undefined}
-          page={page}
-          totalPages={resolveTotalPages(total, PAGE_SIZE)}
-          variant="admin"
-        />
+        <div className="admin-log-pagination-footer">
+          <span>
+            第 {page} / {Math.max(totalPages, 1)} 页 · 每页 {PAGE_SIZE} 条
+          </span>
+          <PostPagination
+            basePath="/admin/logs"
+            className="admin-pagination"
+            extraQuery={action ? { action } : undefined}
+            page={page}
+            totalPages={totalPages}
+            variant="admin"
+          />
+        </div>
       </AdminSurface>
     </AdminPage>
   );

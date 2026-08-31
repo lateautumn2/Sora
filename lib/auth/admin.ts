@@ -15,6 +15,8 @@ export async function isAdminInitialized(): Promise<boolean> {
 export const getAdminSession = cache(async () => {
   return auth.api.getSession({
     headers: await headers(),
+    // 即使以后重新启用通用 Cookie 缓存，后台授权仍必须即时感知会话撤销。
+    query: { disableCookieCache: true },
   });
 });
 

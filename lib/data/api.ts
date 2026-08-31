@@ -17,7 +17,11 @@ export async function requireAdminApiRequest(request: Request) {
   if (!isTrustedRequestOrigin(request)) {
     throw new DataApiError("ORIGIN_REJECTED", "请求来源不受信任", 403);
   }
-  const session = await auth.api.getSession({ headers: request.headers });
+  // 数据管理接口同样绕过 Cookie 会话缓存，避免被撤销会话继续导入或恢复数据。
+  const session = await auth.api.getSession({
+    headers: request.headers,
+    query: { disableCookieCache: true },
+  });
   if (!session) throw new DataApiError("AUTH_REQUIRED", "管理员登录已失效", 401);
   return session;
 }

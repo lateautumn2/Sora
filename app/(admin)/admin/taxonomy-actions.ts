@@ -2,12 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { z } from "zod";
 
 import { requireAdminSession } from "@/lib/auth/admin";
 import { operationActions, recordOperation } from "@/lib/auth/operation-log";
 import { deleteTaxonomy, saveTaxonomy } from "@/lib/content/service";
-import { normalizeSlug, taxonomyInputSchema } from "@/lib/content/validation";
+import {
+  normalizeSlug,
+  storedIdentifierSchema,
+  taxonomyInputSchema,
+} from "@/lib/content/validation";
 import type { FormActionState } from "@/lib/forms/action-state";
 
 export type TaxonomyActionState = FormActionState<"id" | "name" | "slug" | "description">;
@@ -66,7 +69,7 @@ async function remove(
 ): Promise<TaxonomyActionState> {
   const session = await requireAdminSession();
   const segment = type === "category" ? "categories" : "tags";
-  const id = z.string().uuid().safeParse(formData.get("id"));
+  const id = storedIdentifierSchema.safeParse(formData.get("id"));
   if (!id.success) {
     return { status: "error", fieldErrors: { id: "记录不存在。" }, formError: "删除失败。" };
   }

@@ -1358,6 +1358,21 @@
   white-space: pre-wrap;
 }
 
+.admin-log-pagination-footer {
+  display: flex;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.25rem;
+  color: var(--admin-muted);
+  font-size: 0.75rem;
+}
+
+.admin-log-pagination-footer .admin-pagination {
+  margin: 0;
+}
+
 .admin-data-primary {
   display: grid;
   gap: 0.25rem;
@@ -2299,6 +2314,11 @@
 
   .admin-comment-reply {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-log-pagination-footer {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .admin-pagination {
