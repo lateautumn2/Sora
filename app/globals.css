@@ -411,6 +411,49 @@ input[type="file"].form-input:hover::file-selector-button {
   line-height: 1.65;
 }
 
+.sora-post-content .sora-code-block {
+  position: relative;
+}
+
+.sora-post-content .sora-code-block > code {
+  display: block;
+  padding-right: 2rem;
+}
+
+.sora-post-content .sora-code-copy {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  z-index: 1;
+  display: grid;
+  width: 1.9rem;
+  height: 1.9rem;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 6px;
+  background: rgb(32 33 36 / 88%);
+  padding: 0;
+  color: rgb(255 255 255 / 72%);
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    color 160ms ease;
+}
+
+.sora-post-content .sora-code-copy:hover,
+.sora-post-content .sora-code-copy:focus-visible {
+  border-color: rgb(255 255 255 / 30%);
+  background: rgb(255 255 255 / 14%);
+  color: #ffffff;
+}
+
+.sora-post-content .sora-code-copy.is-copied {
+  border-color: color-mix(in srgb, var(--primary) 65%, transparent);
+  color: var(--primary);
+}
+
 .prose-content :not(pre) > code {
   border-radius: 4px;
   background: var(--surface-strong);

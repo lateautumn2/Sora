@@ -9,6 +9,18 @@ interface PostImage {
   title?: string;
 }
 
+const copyIcon =
+  '<svg aria-hidden="true" fill="none" height="16" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"><rect height="12" rx="2" stroke="currentColor" stroke-width="2" width="12" x="8" y="8"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg>';
+const copiedIcon =
+  '<svg aria-hidden="true" fill="none" height="16" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"><path d="m5 12 4 4L19 6" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/></svg>';
+
+function setCopyButtonState(button: HTMLButtonElement, copied: boolean) {
+  button.innerHTML = copied ? copiedIcon : copyIcon;
+  button.classList.toggle("is-copied", copied);
+  button.title = copied ? "代码已复制" : "复制代码";
+  button.setAttribute("aria-label", copied ? "代码已复制" : "复制代码");
+}
+
 export function PostContent({ html }: { html: string }) {
   const [preview, setPreview] = useState<PostImage | null>(null);
 
@@ -40,6 +52,47 @@ export function PostContent({ html }: { html: string }) {
       title: target.title || undefined,
     });
   }
+
+  useEffect(() => {
+    const codeBlocks = Array.from(document.querySelectorAll<HTMLPreElement>("#post-content pre"));
+    const cleanups = codeBlocks.map((pre) => {
+      pre.classList.add("sora-code-block");
+
+      const button = document.createElement("button");
+      button.className = "sora-code-copy";
+      button.type = "button";
+      setCopyButtonState(button, false);
+
+      async function copyCode() {
+        const code = pre.querySelector("code")?.textContent ?? pre.textContent ?? "";
+        try {
+          await navigator.clipboard.writeText(code);
+        } catch {
+          const textarea = document.createElement("textarea");
+          textarea.value = code;
+          textarea.setAttribute("readonly", "");
+          textarea.style.position = "fixed";
+          textarea.style.opacity = "0";
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand("copy");
+          textarea.remove();
+        }
+        setCopyButtonState(button, true);
+        window.setTimeout(() => setCopyButtonState(button, false), 1600);
+      }
+
+      button.addEventListener("click", copyCode);
+      pre.appendChild(button);
+      return () => {
+        button.removeEventListener("click", copyCode);
+        button.remove();
+        pre.classList.remove("sora-code-block");
+      };
+    });
+
+    return () => cleanups.forEach((cleanup) => cleanup());
+  }, [html]);
 
   return (
     <>
