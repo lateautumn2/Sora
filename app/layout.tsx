@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 
 import { FontStylesheets } from "@/components/font-stylesheets";
-import { ThemeProvider, THEME_STORAGE_KEY } from "@/components/ui/theme-provider";
+import { ThemeProvider } from "@/components/ui/theme-provider";
 import { getSiteSettings } from "@/lib/content/service";
 import { getEnvironment } from "@/lib/env";
+import { THEME_STORAGE_KEY } from "@/lib/theme";
 
 import "./globals.css";
 import "./admin-ui.css";

@@ -84,11 +84,11 @@ body {
   letter-spacing: 0;
 }
 
-/* 主题切换时平滑过渡颜色；View Transitions API 可用时由按钮位置触发整页扩散。 */
-body,
-body *,
-body *::before,
-body *::after {
+/* 首次主题同步完成后才启用颜色过渡，避免刷新时闪现默认浅色主题。 */
+:root[data-theme-ready] body,
+:root[data-theme-ready] body *,
+:root[data-theme-ready] body *::before,
+:root[data-theme-ready] body *::after {
   transition:
     background-color 220ms ease,
     border-color 220ms ease,

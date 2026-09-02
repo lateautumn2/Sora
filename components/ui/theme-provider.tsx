@@ -4,8 +4,7 @@ import { Moon, Sun } from "lucide-react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { MouseEvent, ReactNode } from "react";
 
-export const THEME_STORAGE_KEY = "sora-theme";
-export type Theme = "light" | "dark";
+import { THEME_STORAGE_KEY, type Theme } from "@/lib/theme";
 
 interface ThemeContextValue {
   theme: Theme | null;
@@ -44,9 +43,17 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     };
 
     syncTheme();
+
+    // 首次主题同步完成后再启用颜色过渡，避免刷新时把 light → dark 的初始化过程展示出来。
+    const readyFrame = window.requestAnimationFrame(() => {
+      document.documentElement.dataset.themeReady = "true";
+    });
     const handleSystemThemeChange = () => syncTheme();
     media.addEventListener("change", handleSystemThemeChange);
-    return () => media.removeEventListener("change", handleSystemThemeChange);
+    return () => {
+      window.cancelAnimationFrame(readyFrame);
+      media.removeEventListener("change", handleSystemThemeChange);
+    };
   }, []);
 
   const toggleTheme = useCallback(() => {
