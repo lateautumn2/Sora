@@ -2246,6 +2246,23 @@
   gap: 1rem;
 }
 
+.settings-password-input {
+  position: relative;
+}
+
+.settings-password-input .ui-input {
+  padding-right: 3rem;
+}
+
+.settings-password-input .ui-icon-button {
+  position: absolute;
+  top: 50%;
+  right: 0.125rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  transform: translateY(-50%);
+}
+
 .settings-cover-sources {
   display: grid;
   min-width: 0;

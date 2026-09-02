@@ -1,6 +1,6 @@
 "use client";
 
-import { LoaderCircle, Plus, Save, Trash2 } from "lucide-react";
+import { Eye, EyeOff, LoaderCircle, Plus, Save, Trash2 } from "lucide-react";
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 
@@ -51,6 +51,27 @@ function SubmitButton({ children }: { children: string }) {
       )}
       {pending ? "正在保存" : children}
     </Button>
+  );
+}
+
+function SmtpPasswordInput({ defaultValue }: { defaultValue: string }) {
+  const [visible, setVisible] = useState(false);
+  const label = visible ? "隐藏 SMTP 密码" : "显示 SMTP 密码";
+
+  return (
+    <div className="settings-password-input">
+      <Input
+        autoComplete="off"
+        defaultValue={defaultValue}
+        name="password"
+        type={visible ? "text" : "password"}
+      />
+      <Tooltip content={label}>
+        <IconButton aria-label={label} onClick={() => setVisible((current) => !current)}>
+          {visible ? <EyeOff aria-hidden="true" size={17} /> : <Eye aria-hidden="true" size={17} />}
+        </IconButton>
+      </Tooltip>
+    </div>
   );
 }
 
@@ -351,21 +372,8 @@ export function SettingsForm({ runtimeConfig, settings, smtpConfig }: SettingsFo
                   <Field error={smtpState.fieldErrors?.user} label="SMTP 用户名">
                     <Input autoComplete="username" defaultValue={smtpConfig.user} name="user" />
                   </Field>
-                  <Field
-                    description={
-                      smtpConfig.passwordConfigured
-                        ? "已保存密码；留空将继续使用现有密码。"
-                        : "请填写邮箱密码或 SMTP 授权码。"
-                    }
-                    error={smtpState.fieldErrors?.password}
-                    label="SMTP 密码"
-                  >
-                    <Input
-                      autoComplete="new-password"
-                      name="password"
-                      placeholder={smtpConfig.passwordConfigured ? "留空保持不变" : ""}
-                      type="password"
-                    />
+                  <Field error={smtpState.fieldErrors?.password} label="SMTP 密码">
+                    <SmtpPasswordInput defaultValue={smtpConfig.password} />
                   </Field>
                 </div>
                 <div className="settings-form-two-columns">

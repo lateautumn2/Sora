@@ -38,9 +38,9 @@ const smtpStoredConfigSchema = smtpConfigFormSchema.superRefine((config, context
 export type SmtpConfigFormInput = z.infer<typeof smtpConfigFormSchema>;
 type StoredSmtpConfig = z.infer<typeof smtpStoredConfigSchema>;
 
-export interface SmtpConfigView extends Omit<StoredSmtpConfig, "password"> {
+export type SmtpConfigView = StoredSmtpConfig & {
   passwordConfigured: boolean;
-}
+};
 
 const defaultConfig: StoredSmtpConfig = smtpStoredConfigSchema.parse({});
 
@@ -69,14 +69,17 @@ export function getSmtpConfig(): StoredSmtpConfig {
   }
 }
 
-/** 返回可安全传给后台客户端组件的配置，永不包含 SMTP 密码。 */
+/**
+ * 返回后台 SMTP 设置视图，包含密码以支持管理员页面回填。
+ * 调用方必须确保该数据只进入经过管理员会话保护的页面，不得写入日志或公开接口。
+ */
 export function getSmtpConfigView(): SmtpConfigView {
-  const { password, ...config } = getSmtpConfig();
-  return { ...config, passwordConfigured: Boolean(password) };
+  const config = getSmtpConfig();
+  return { ...config, passwordConfigured: Boolean(config.password) };
 }
 
 /**
- * 保存 SMTP 配置。密码留空时沿用已保存值，避免把现有凭据回传浏览器。
+ * 保存 SMTP 配置。密码留空时沿用已保存值，避免误操作清除现有凭据。
  * 文件位于 data/secrets，权限按当前平台能力收紧为仅当前用户可读写。
  */
 export function saveSmtpConfig(input: SmtpConfigFormInput): SmtpConfigView {
@@ -91,6 +94,5 @@ export function saveSmtpConfig(input: SmtpConfigFormInput): SmtpConfigView {
     encoding: "utf8",
     mode: 0o600,
   });
-  const { password, ...view } = config;
-  return { ...view, passwordConfigured: Boolean(password) };
+  return { ...config, passwordConfigured: Boolean(config.password) };
 }
