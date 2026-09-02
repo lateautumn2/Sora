@@ -420,6 +420,13 @@ input[type="file"].form-input:hover::file-selector-button {
   padding-right: 2rem;
 }
 
+.sora-post-content .sora-code-block::selection,
+.sora-post-content .sora-code-block *::selection {
+  background: rgb(37 99 235 / 78%);
+  color: #ffffff;
+  text-shadow: none;
+}
+
 .sora-post-content .sora-code-copy {
   position: absolute;
   top: 0.6rem;
