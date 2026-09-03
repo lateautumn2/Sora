@@ -1,14 +1,16 @@
-# Sora
+<center>
 
-**Sora**
+# Sora
 
 Sora 意为「穹」，象征着无限的可能性、广阔的空间和创造力
 
 若君喜欢这个主题，欢迎 🌟Star！
 
-Sora 是一个可自行部署的全栈博客系统，视觉与信息结构参考 [halo-theme-sora](https://github.com/Liksium/halo-theme-sora)，运行时不依赖 Halo。公开站点、管理后台与 API 均由 Next.js 提供，文章、评论和站点配置保存到 SQLite，上传文件保存在本地持久化目录中。
+</center>
 
 ## 技术栈
+
+Sora 是一个可自行部署的全栈博客系统，视觉与信息结构参考 [halo-theme-sora](https://github.com/Liksium/halo-theme-sora)，完全由Next.js进行构建。
 
 - Next.js 16、React 19、TypeScript 6、Tailwind CSS 4
 - SQLite、Drizzle ORM、Better Auth
@@ -18,13 +20,11 @@ Sora 是一个可自行部署的全栈博客系统，视觉与信息结构参考
 
 ## Docker Compose 部署
 
-服务器需要安装 Docker Engine 与 Docker Compose 插件。下载仓库中的 `compose.yaml`，在同级目录执行：
+下载仓库中的 `compose.yaml`，在同级目录执行：
 
 ```shell
-docker compose up -d app
+docker compose up -d
 ```
-
-Compose 会将 `./data` 挂载为持久化目录。Linux bind mount 需要允许容器用户 `1001:1001` 写入该目录。默认端口为 `3000:3000`，建议使用 Caddy、Nginx 等反向代理提供 HTTPS。
 
 首次启动会自动创建 SQLite 数据库、应用全部迁移，并生成认证所需的密钥。随后访问 `/admin/setup` 创建管理员账号，初始化完成后通过 `/admin` 登录后台。
 
@@ -32,7 +32,7 @@ Compose 会将 `./data` 挂载为持久化目录。Linux bind mount 需要允许
 
 ```shell
 docker compose pull
-docker compose up -d app
+docker compose up -d
 ```
 
 容器启动时会自动应用新增数据库迁移。升级前建议在管理后台下载完整备份。
@@ -58,16 +58,8 @@ docker compose up -d app
 
 ```shell
 cp .env.example .env.local
-corepack enable
 pnpm install
-pnpm db:migrate:runtime
 pnpm dev
-```
-
-Windows PowerShell 使用：
-
-```powershell
-Copy-Item .env.example .env.local
 ```
 
 开发服务默认位于 `http://127.0.0.1:3000`，后台入口为 `/admin`。
